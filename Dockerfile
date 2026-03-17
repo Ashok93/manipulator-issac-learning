@@ -30,12 +30,15 @@ RUN mkdir -p /var/lib/apt/lists/partial \
 
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin:${PATH}"
-RUN uv python install 3.11
+RUN uv python install 3.11 \
+    && uv venv /opt/venv --python 3.11
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="/opt/venv/bin:${PATH}"
 
 WORKDIR /workspace
 COPY pyproject.toml requirements-sim.txt /workspace/
-RUN uv pip install --system --python 3.11 setuptools wheel uv_build
-RUN uv pip install --system --python 3.11 --no-build-isolation \
+RUN uv pip install setuptools wheel uv_build
+RUN uv pip install --no-build-isolation \
     --index-url https://pypi.nvidia.com/ \
     --extra-index-url https://pypi.org/simple \
     -r /workspace/requirements-sim.txt
