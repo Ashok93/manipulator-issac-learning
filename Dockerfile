@@ -3,7 +3,9 @@ FROM ${ISAACSIM_BASE_IMAGE}
 
 SHELL ["/bin/bash", "-lc"]
 
-RUN apt-get update \
+USER root
+RUN mkdir -p /var/lib/apt/lists/partial \
+    && apt-get update \
     && apt-get install -y --no-install-recommends \
         ffmpeg \
         build-essential \
