@@ -34,8 +34,8 @@ RUN uv python install 3.11
 
 WORKDIR /workspace
 COPY pyproject.toml requirements-sim.txt /workspace/
-RUN uv pip install --python 3.11 setuptools wheel uv_build
-RUN uv pip install --python 3.11 --no-build-isolation \
+RUN uv pip install --system --python 3.11 setuptools wheel uv_build
+RUN uv pip install --system --python 3.11 --no-build-isolation \
     --index-url https://pypi.nvidia.com/ \
     --extra-index-url https://pypi.org/simple \
     -r /workspace/requirements-sim.txt
