@@ -2,17 +2,20 @@
 
 from __future__ import annotations
 
-import os
-import sys
 import argparse
 import time
+from pathlib import Path
 
-# Ensure local LeIsaac/IsaacLab sources are importable when running via Isaac Sim.
-_LEISAAC_SRC = os.path.expanduser("~/leisaac/source")
-_ISAACLAB_SRC = os.path.expanduser("~/leisaac/dependencies/IsaacLab/source")
-for _path in (_LEISAAC_SRC, _ISAACLAB_SRC):
-    if _path not in sys.path:
-        sys.path.insert(0, _path)
+# Ensure local LeIsaac/IsaacLab and this repo are importable when running via Isaac Sim.
+_HERE = Path(__file__).resolve()
+_REPO_ROOT = _HERE.parents[1]
+_SRC = _REPO_ROOT / "src"
+_LEISAAC_SRC = Path.home() / "leisaac" / "source"
+_ISAACLAB_SRC = Path.home() / "leisaac" / "dependencies" / "IsaacLab" / "source"
+for _path in (_SRC, _LEISAAC_SRC, _ISAACLAB_SRC):
+    _path_str = str(_path)
+    if _path_str not in sys.path:
+        sys.path.insert(0, _path_str)
 
 from manipulator_learning.envhub import make_env
 
