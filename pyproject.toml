@@ -29,7 +29,7 @@ environments = [
 override-dependencies = [
   "pywin32==306; sys_platform == 'win32'",
 ]
-extra-build-dependencies = { isaacsim = ["wheel_stub"], flatdict = ["pkg_resources"] }
+extra-build-dependencies = { isaacsim = ["wheel_stub"], flatdict = ["setuptools<70"] }
 
 [[tool.uv.index]]
 url = "https://pypi.nvidia.com/"
