@@ -132,9 +132,9 @@ def make_env(
         )
 
     try:
-        from lerobot.envs.factory import make_env as make_base_env
+        from leisaac.envs.factory import make_env as make_base_env
     except Exception as exc:
-        raise RuntimeError("LeRobot is required. Install dependencies first.") from exc
+        raise RuntimeError("LeIsaac is required. Install dependencies first.") from exc
 
     envs_dict = make_base_env(
         base_task,

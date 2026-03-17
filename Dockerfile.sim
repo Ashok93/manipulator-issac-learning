@@ -26,8 +26,7 @@ ENV PATH="/root/.local/bin:${PATH}"
 ENV UV_PYTHON=/isaac-sim/python.sh
 
 WORKDIR /workspace
-COPY pyproject.toml README.md requirements-sim.txt /workspace/
-COPY src /workspace/src
+COPY requirements-sim.txt /workspace/
 RUN uv pip install --python /isaac-sim/python.sh setuptools wheel uv_build
 RUN uv pip install --python /isaac-sim/python.sh -r /workspace/requirements-sim.txt
 
