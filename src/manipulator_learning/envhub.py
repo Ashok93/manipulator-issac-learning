@@ -134,6 +134,14 @@ def make_env(
     try:
         from leisaac.envs.factory import make_env as make_base_env
     except Exception as exc:
+        import sys
+        import traceback
+
+        print("[ERROR] Failed to import leisaac.envs.factory.", file=sys.stderr)
+        traceback.print_exc()
+        print("[ERROR] sys.path:", file=sys.stderr)
+        for entry in sys.path:
+            print(f"  - {entry}", file=sys.stderr)
         raise RuntimeError("LeIsaac is required. Install dependencies first.") from exc
 
     envs_dict = make_base_env(
