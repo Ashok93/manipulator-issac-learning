@@ -52,8 +52,8 @@ ENV PATH="/opt/venv/bin:${PATH}"
 
 WORKDIR /workspace
 COPY pyproject.toml requirements-sim.txt /workspace/
-RUN uv pip install setuptools wheel uv_build
-RUN uv pip install --no-build-isolation --prerelease=allow \
+RUN python -m pip install -U pip setuptools wheel
+RUN python -m pip install --no-build-isolation --pre \
     --index-url https://pypi.nvidia.com/ \
     --extra-index-url https://pypi.org/simple \
     -r /workspace/requirements-sim.txt
