@@ -28,7 +28,7 @@ ENV UV_PYTHON=/isaac-sim/python.sh
 WORKDIR /workspace
 COPY requirements-sim.txt /workspace/
 RUN uv pip install --python /isaac-sim/python.sh setuptools wheel uv_build
-RUN uv pip install --python /isaac-sim/python.sh -r /workspace/requirements-sim.txt
+RUN uv pip install --python /isaac-sim/python.sh --no-build-isolation -r /workspace/requirements-sim.txt
 
 ENV ACCEPT_EULA=Y
 ENV OMNI_KIT_ACCEPT_EULA=YES
