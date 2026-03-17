@@ -1,7 +1,5 @@
 torch==2.7.0
 torchvision==0.22.0
 numpy==1.26.0
-# IsaacLab is installed from NVIDIA index; Isaac Sim is provided by the base image.
-isaaclab==2.3.2.post1
-# Pin to a specific commit hash for reproducibility.
-leisaac @ git+https://github.com/LightwheelAI/leisaac.git#subdirectory=source/leisaac
+# Install LeIsaac with IsaacLab extra per official docs.
+leisaac[isaaclab] @ git+https://github.com/LightwheelAI/leisaac.git#subdirectory=source/leisaac

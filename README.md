@@ -41,9 +41,10 @@ docker compose exec train bash
 
 ## Dependencies
 
-This repo follows LeIsaac EnvHub guidance:
-- `leisaac[isaaclab]` from LightwheelAI GitHub (Isaac Lab integration).
-- `lerobot==0.4.1` and `numpy==1.26.0`.
+This repo is split by environment:
+- `sim` uses `leisaac[isaaclab]` per official LeIsaac install guidance.
+- `train` uses `lerobot==0.4.1`.
+- Base package only pins `numpy==1.26.0` to avoid cross-env conflicts.
 
 ## Toy Sorting Task
 
