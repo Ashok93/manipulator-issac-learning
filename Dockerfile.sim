@@ -30,8 +30,8 @@ COPY pyproject.toml README.md requirements-sim.txt /workspace/
 COPY src /workspace/src
 RUN uv pip install --python /isaac-sim/python.sh setuptools wheel uv_build
 RUN uv pip install --python /isaac-sim/python.sh -r /workspace/requirements-sim.txt
-RUN uv pip install --python /isaac-sim/python.sh --no-build-isolation --no-deps -e .
 
 ENV ACCEPT_EULA=Y
 ENV OMNI_KIT_ACCEPT_EULA=YES
+ENV PYTHONPATH=/workspace/src
 CMD ["bash"]
