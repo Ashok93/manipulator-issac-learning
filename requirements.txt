@@ -1,0 +1,6 @@
+torch==2.7.0
+torchvision==0.22.0
+numpy==1.26.0
+lerobot==0.4.1
+# Pin to a specific commit hash for reproducibility.
+leisaac[isaaclab] @ git+https://github.com/LightwheelAI/leisaac.git#subdirectory=source/leisaac

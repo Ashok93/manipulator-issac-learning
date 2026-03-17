@@ -12,6 +12,7 @@ Learning stack for manipulation tasks in Isaac Sim using LeRobot + LeIsaac EnvHu
 
 - `src/manipulator_learning/tasks/` custom tasks and wrappers.
 - `scripts/` entrypoints for data collection and training.
+- `env.py` EnvHub entrypoint (loadable via `lerobot.envs.factory.make_env`).
 
 ## Docker
 
@@ -32,6 +33,12 @@ This repo follows LeIsaac EnvHub guidance:
 We base the task on LeIsaac EnvHub's `LeIsaac-SO101-CleanToyTable-v0` and overlay
 color-sorting prompts and colored bins/toys at runtime.
 The EnvHub loader uses `LightwheelAI/leisaac_env:envs/so101_clean_toytable.py`.
+
+### EnvHub Packaging
+
+This repo is an EnvHub-compatible task repo. The entrypoint is `env.py` with a
+`make_env` function. Load it via LeRobot EnvHub by pointing at this repo (and
+pin to a commit for reproducibility).
 
 List available EnvHub tasks:
 

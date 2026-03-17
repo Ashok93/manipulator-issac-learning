@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import argparse
-import subprocess
-import sys
-from pathlib import Path
+from manipulator_learning.leisaac_tools import run_teleop_se3_agent
 
 
 def _parse_args() -> argparse.Namespace:
@@ -26,26 +24,10 @@ def _parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def _find_leisaac_teleop_script() -> Path:
-    import leisaac
-
-    root = Path(leisaac.__file__).resolve().parent
-    candidates = list(root.rglob("teleop_se3_agent.py"))
-    if not candidates:
-        raise FileNotFoundError(
-            "teleop_se3_agent.py not found in leisaac package. "
-            "Ensure leisaac is installed from source with scripts included."
-        )
-    return candidates[0]
-
-
 def main() -> None:
     args = _parse_args()
-    script_path = _find_leisaac_teleop_script()
 
     cmd = [
-        sys.executable,
-        str(script_path),
         "--task",
         args.task,
         "--teleop_device",
@@ -61,7 +43,7 @@ def main() -> None:
     if args.headless:
         cmd.append("--headless")
 
-    subprocess.run(cmd, check=True)
+    run_teleop_se3_agent(cmd)
 
 
 if __name__ == "__main__":
