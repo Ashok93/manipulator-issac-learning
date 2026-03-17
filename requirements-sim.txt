@@ -1,4 +1,4 @@
 torch==2.7.0
 torchvision==0.22.0
 numpy==1.26.0
-leisaac[isaaclab]==0.3.0
+leisaac[isaaclab] @ git+https://github.com/LightwheelAI/leisaac.git#subdirectory=source/leisaac
