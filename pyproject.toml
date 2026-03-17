@@ -9,7 +9,8 @@ dependencies = [
     "torchvision==0.22.0",
     "numpy==1.26.0",
     "lerobot==0.4.1",
-    "leisaac[isaaclab] @ git+https://github.com/LightwheelAI/leisaac.git#subdirectory=source/leisaac",
+    "isaaclab==2.3.2.post1",
+    "leisaac @ git+https://github.com/LightwheelAI/leisaac.git#subdirectory=source/leisaac",
 ]
 
 [tool.uv]

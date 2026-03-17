@@ -1,8 +1,8 @@
 services:
-  manipulator-learning:
+  sim:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.sim
       args:
         ISAACSIM_BASE_IMAGE: ${ISAACSIM_BASE_IMAGE:-nvcr.io/nvidia/isaac-sim:5.1.0}
     environment:
@@ -14,6 +14,22 @@ services:
     volumes:
       - .:/workspace:rw
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    runtime: nvidia
+    shm_size: "4gb"
+    stdin_open: true
+    tty: true
+
+  train:
+    build:
+      context: .
+      dockerfile: Dockerfile.train
+      args:
+        TRAIN_BASE_IMAGE: ${TRAIN_BASE_IMAGE:-pytorch/pytorch:2.7.0-cuda12.8-cudnn9-runtime}
+    environment:
+      NVIDIA_VISIBLE_DEVICES: "all"
+      NVIDIA_DRIVER_CAPABILITIES: "compute,utility"
+    volumes:
+      - .:/workspace:rw
     runtime: nvidia
     shm_size: "4gb"
     stdin_open: true

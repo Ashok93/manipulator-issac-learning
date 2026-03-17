@@ -19,7 +19,24 @@ Learning stack for manipulation tasks in Isaac Sim using LeRobot + LeIsaac EnvHu
 ```bash
 docker compose build
 docker compose up -d
-docker compose exec manipulator-learning bash
+docker compose exec sim bash
+```
+
+### Split Services
+
+- `sim`: Isaac Sim + LeIsaac for teleop and data collection.
+- `train`: PyTorch + LeRobot for model training.
+
+Build or run a single service:
+
+```bash
+docker compose build sim
+docker compose up -d sim
+docker compose exec sim bash
+
+docker compose build train
+docker compose up -d train
+docker compose exec train bash
 ```
 
 ## Dependencies
