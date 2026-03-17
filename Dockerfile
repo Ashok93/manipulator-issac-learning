@@ -18,6 +18,21 @@ RUN mkdir -p /var/lib/apt/lists/partial \
         libsm6 \
         libxext6 \
         libxrender1 \
+        libxi6 \
+        libxrandr2 \
+        libxss1 \
+        libxtst6 \
+        libatk1.0-0 \
+        libgtk-3-0 \
+        libnss3 \
+        libasound2 \
+        libxdamage1 \
+        libxfixes3 \
+        libxkbcommon0 \
+        libxkbcommon-x11-0 \
+        libdrm2 \
+        libegl1 \
+        libglvnd0 \
         ffmpeg \
         libavformat-dev \
         libavcodec-dev \
@@ -38,7 +53,7 @@ ENV PATH="/opt/venv/bin:${PATH}"
 WORKDIR /workspace
 COPY pyproject.toml requirements-sim.txt /workspace/
 RUN uv pip install setuptools wheel uv_build
-RUN uv pip install --no-build-isolation \
+RUN uv pip install --no-build-isolation --prerelease=allow \
     --index-url https://pypi.nvidia.com/ \
     --extra-index-url https://pypi.org/simple \
     -r /workspace/requirements-sim.txt
