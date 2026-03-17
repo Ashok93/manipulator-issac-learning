@@ -28,9 +28,10 @@ ENV UV_PYTHON=/isaac-sim/python.sh
 WORKDIR /workspace
 COPY requirements-sim.txt /workspace/
 RUN uv pip install --python /isaac-sim/python.sh setuptools wheel uv_build
-RUN uv pip install --python /isaac-sim/python.sh --no-build-isolation -r /workspace/requirements-sim.txt
-# Install IsaacLab + LeIsaac without pulling isaacsim from pip (already in base image).
-RUN uv pip install --python /isaac-sim/python.sh --no-deps "isaaclab @ git+https://github.com/NVIDIA-Omniverse/IsaacLab.git@v2.3.0" "leisaac @ git+https://github.com/LightwheelAI/leisaac.git@v0.3.0#subdirectory=source/leisaac"
+RUN uv pip install --python /isaac-sim/python.sh --no-build-isolation \
+    --index-url https://pypi.nvidia.com/ \
+    --extra-index-url https://pypi.org/simple \
+    -r /workspace/requirements-sim.txt
 
 ENV ACCEPT_EULA=Y
 ENV OMNI_KIT_ACCEPT_EULA=YES
