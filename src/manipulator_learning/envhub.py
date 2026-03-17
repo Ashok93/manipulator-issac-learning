@@ -132,17 +132,25 @@ def make_env(
         )
 
     try:
-        from leisaac.envs.factory import make_env as make_base_env
-    except Exception as exc:
-        import sys
-        import traceback
+        from lerobot.envs.factory import make_env as make_base_env
+    except Exception as lerobot_exc:
+        try:
+            from leisaac.envs.factory import make_env as make_base_env
+        except Exception as leisaac_exc:
+            import sys
+            import traceback
 
-        print("[ERROR] Failed to import leisaac.envs.factory.", file=sys.stderr)
-        traceback.print_exc()
-        print("[ERROR] sys.path:", file=sys.stderr)
-        for entry in sys.path:
-            print(f"  - {entry}", file=sys.stderr)
-        raise RuntimeError("LeIsaac is required. Install dependencies first.") from exc
+            print("[ERROR] Failed to import EnvHub factory.", file=sys.stderr)
+            print("[ERROR] lerobot.envs.factory import error:", file=sys.stderr)
+            traceback.print_exception(type(lerobot_exc), lerobot_exc, lerobot_exc.__traceback__)
+            print("[ERROR] leisaac.envs.factory import error:", file=sys.stderr)
+            traceback.print_exception(type(leisaac_exc), leisaac_exc, leisaac_exc.__traceback__)
+            print("[ERROR] sys.path:", file=sys.stderr)
+            for entry in sys.path:
+                print(f"  - {entry}", file=sys.stderr)
+            raise RuntimeError(
+                "EnvHub factory not available. Install lerobot or a LeIsaac build with env factory."
+            ) from leisaac_exc
 
     envs_dict = make_base_env(
         base_task,
