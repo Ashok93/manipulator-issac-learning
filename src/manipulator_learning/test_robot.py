@@ -37,7 +37,7 @@ def main() -> None:
         simulation_app.update()
 
     print("[test_robot] Calling sim.reset() ...")
-    sim.reset()
+    sim.reset(soft=True)
     print("[test_robot] sim.reset() done!")
     scene.reset()
     print("[test_robot] Running ...")
