@@ -121,61 +121,47 @@ class ToySortingEnv:
         self._setup_scene_isaac()
 
     def _setup_scene_isaac(self) -> None:
-        import isaaclab.sim as sim_utils
         import omni.usd
+        import isaaclab.sim as sim_utils
+        from isaaclab.assets import Articulation
         from pxr import Gf, UsdGeom
 
         from manipulator_learning.envs.so_arm101_cfg import make_so_arm101_cfg
-
-        # Ensure assets are available before touching USD.
-        # Use subprocess to avoid PYTHONPATH issues with assets/ being outside src/.
-        import subprocess, sys as _sys
-        _assets_script = str(_REPO_ROOT / "assets" / "download.py")
-        subprocess.run([_sys.executable, _assets_script], check=False)
 
         stage = omni.usd.get_context().get_stage()
         self._stage = stage
 
         # 1. Ground plane
-        ground_cfg = sim_utils.GroundPlaneCfg(size=(10.0, 10.0))
+        ground_cfg = sim_utils.GroundPlaneCfg()
         ground_cfg.func("/World/GroundPlane", ground_cfg)
 
         # 2. Dome light
         light_cfg = sim_utils.DomeLightCfg(intensity=2000.0, color=(0.9, 0.9, 1.0))
         light_cfg.func("/World/DomeLight", light_cfg)
 
-        # 3. Table (static, no physics needed for visual-only Phase 1)
-        table_prim_path = "/World/Table"
-        stage.DefinePrim(table_prim_path, "Xform")
-        table_ref = stage.GetPrimAtPath(table_prim_path)
-        table_ref.GetReferences().AddReference(self.cfg.table_usd)
+        # 3. Table (static visual reference via UsdFileCfg)
+        table_cfg = sim_utils.UsdFileCfg(usd_path=self.cfg.table_usd)
+        table_cfg.func("/World/Table", table_cfg)
 
-        # 4. SO-ARM 101 robot via URDF → ArticulationCfg (Isaac Lab handles USD conversion)
+        # 4. SO-ARM 101 robot
         robot_cfg = make_so_arm101_cfg(self.cfg.robot_urdf)
         robot_cfg.prim_path = "/World/Robot"
-        self._robot = robot_cfg.to_articulation()  # spawns and registers with physics
+        self._robot = Articulation(cfg=robot_cfg)
 
         # 5. Trays (3× SM_P_Tray_01)
         for idx, pos in enumerate(self.cfg.tray_positions):
             prim_path = f"/World/Tray_{idx}"
-            stage.DefinePrim(prim_path, "Xform")
-            tray_prim = stage.GetPrimAtPath(prim_path)
-            tray_prim.GetReferences().AddReference(self.cfg.tray_usd)
-            xformable = UsdGeom.Xformable(tray_prim)
-            xformable.ClearXformOpOrder()
-            t_op = xformable.AddTranslateOp()
-            t_op.Set(Gf.Vec3d(*pos))
-            self._tray_prims.append(tray_prim)
+            tray_cfg = sim_utils.UsdFileCfg(usd_path=self.cfg.tray_usd)
+            tray_cfg.func(prim_path, tray_cfg, translation=tuple(pos))
+            self._tray_prims.append(stage.GetPrimAtPath(prim_path))
 
         # 6. Toys (alternating box/disk)
-        self._toy_prims = []
         for idx in range(self.cfg.num_toys):
             usd_path = self.cfg.toy_box_usd if idx % 2 == 0 else self.cfg.toy_disk_usd
             prim_path = f"/World/Toy_{idx}"
-            stage.DefinePrim(prim_path, "Xform")
-            toy_prim = stage.GetPrimAtPath(prim_path)
-            toy_prim.GetReferences().AddReference(usd_path)
-            self._toy_prims.append(toy_prim)
+            toy_cfg = sim_utils.UsdFileCfg(usd_path=usd_path)
+            toy_cfg.func(prim_path, toy_cfg)
+            self._toy_prims.append(stage.GetPrimAtPath(prim_path))
 
         # Initial color assignment and placement
         self._assign_colors()
