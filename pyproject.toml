@@ -18,14 +18,8 @@ sim = [
     "huggingface_hub>=0.23.0",
     "pyzmq>=26.0.0",
 ]
-# Train: runs in Docker (Python 3.12). See Dockerfile.
-train = [
-    "torch>=2.3.0",
-    "torchvision>=0.18.0",
-    "lerobot>=0.4.1",
-    "pyzmq>=26.0.0",
-    "gymnasium>=0.29.0",
-]
+# Train lives in train/ — its own Python 3.12 package with its own lockfile.
+# See train/pyproject.toml and Dockerfile.
 
 # ---------------------------------------------------------------------------
 # uv configuration

@@ -1,4 +1,5 @@
 .venv/
+train/.venv/
 __pycache__/
 *.pyc
 .pytest_cache/

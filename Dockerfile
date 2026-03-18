@@ -11,9 +11,10 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 WORKDIR /workspace
 
-COPY pyproject.toml ./
-COPY src/ ./src/
+# Install train package dependencies
+COPY train/pyproject.toml train/
+COPY train/src/ train/src/
 
-RUN uv sync --extra train --no-dev
+RUN uv sync --project train --no-dev
 
 CMD ["/bin/bash"]
