@@ -43,7 +43,7 @@ from manipulator_learning.envhub import make_env  # noqa: E402
 def main() -> None:
     sim_cfg = sim_utils.SimulationCfg(dt=1.0 / 60.0)
     sim = SimulationContext(sim_cfg)
-    sim.set_camera_view(eye=[0.0, -0.9, 1.6], target=[0.0, 0.1, 0.80])
+    sim.set_camera_view(eye=[0.8, -0.8, 1.2], target=[0.0, 0.0, 0.2])
 
     print("[visualize_env] Building scene …")
     envs_dict = make_env(n_envs=1)

@@ -1,12 +1,9 @@
 """Isaac Lab InteractiveSceneCfg for the toy-sorting task.
 
-Must be imported AFTER AppLauncher starts (isaaclab.* unavailable before that).
-
-Asset scales (from scripts/inspect_assets.py):
-  Table049   metersPerUnit=1.0  →  0.80×0.80×0.80 m at scale=1.0  (surface z=0.80)
-  Tray       metersPerUnit=0.01 →  0.22×0.33 m at scale=0.01       (origin at base)
-  Box        metersPerUnit=1.0  →  0.34×0.09×0.17 m at scale=1.0   (origin at centre, half-h=0.087)
-  Disk       metersPerUnit=1.0  →  0.14×0.14×0.02 m at scale=1.0   (origin at base)
+Asset notes (from scripts/inspect_assets.py):
+  Table049  metersPerUnit=1.0, height=0.80m  → placed at z=-0.80 so surface lands at z=0
+  Disk      metersPerUnit=1.0, half-h=0.012m → bowl origin at centre, place at z=+0.012
+  Box       metersPerUnit=1.0, half-h=0.087m → toy  origin at centre, place at z=+0.026 (scale=0.3)
 """
 
 from __future__ import annotations
@@ -20,97 +17,88 @@ from isaaclab.utils import configclass
 
 from manipulator_learning.envs.so_arm101_cfg import make_so_arm101_cfg
 
-# ---------------------------------------------------------------------------
-# Asset path helpers (resolved at import time — assets must be downloaded)
-# ---------------------------------------------------------------------------
 _REPO_ROOT = Path(__file__).resolve().parents[3]
-_ASSETS = _REPO_ROOT / "assets" / "toy_sorting"
+_ASSETS    = _REPO_ROOT / "assets" / "toy_sorting"
 
 
 def _asset(rel: str) -> str:
     p = _ASSETS / rel
     if not p.exists():
-        raise FileNotFoundError(
-            f"Asset not found: {p}\n"
-            "Run: uv run python assets/download.py --download"
-        )
+        raise FileNotFoundError(f"Asset not found: {p}\nRun: uv run python assets/download.py --download")
     return str(p)
 
 
-_TABLE_USD = _asset("Table049/Table049.usd")
-_TRAY_USD = _asset(
-    "InteractiveAsset/SM_P_Flavour_02/Collected_SM_P_Flavour_02/Props/SM_P_Tray_01.usd"
-)
-_BOX_USD  = _asset("Kitchen_Other/Kitchen_Box.usd")
-_DISK_USD = _asset("Kitchen_Other/Kitchen_Disk001.usd")
+_TABLE_USD  = _asset("Table049/Table049.usd")
+_BOWL_USD   = _asset("Kitchen_Other/Kitchen_Disk001.usd")   # round dish → sorting bowl
+_TOY_USD    = _asset("Kitchen_Other/Kitchen_Box.usd")        # small box  → sorting toy
 _ROBOT_URDF = _asset("so_arm101/urdf/so_arm101.urdf")
 
 # ---------------------------------------------------------------------------
-# Heights derived from USD inspection
+# All objects sit on the table surface = world z=0.
+# Table is lowered by its own height (0.80 m) so its top face lands at z=0.
 # ---------------------------------------------------------------------------
-_TABLE_SURFACE_Z = 0.80   # table top in world coords  (table origin at z=0)
-_TRAY_Z  = _TABLE_SURFACE_Z          # tray origin at base  → sits flush on table
-_BOX_Z   = _TABLE_SURFACE_Z + 0.087  # box origin at centre, half-height=0.087 m at scale=0.5
-_DISK_Z  = _TABLE_SURFACE_Z          # disk origin at base  → sits flush on table
+_S  = 0.0     # table surface world z
+_BZ = _S + 0.012   # bowl  (Disk, half-h=0.012 m at scale=1.0)
+_TZ = _S + 0.026   # toy   (Box,  half-h=0.087*0.3=0.026 m at scale=0.3)
 
-# Toy positions: 3×3 grid between robot and trays
-# Boxes (odd indices) need _BOX_Z; disks (even indices after toy_0) need _DISK_Z
-_TOY_POSITIONS = [
-    (-0.15, -0.05, _BOX_Z),  (-0.00, -0.05, _DISK_Z), (0.15, -0.05, _BOX_Z),
-    (-0.15,  0.05, _DISK_Z), (-0.00,  0.05, _BOX_Z),  (0.15,  0.05, _DISK_Z),
-    (-0.15,  0.15, _BOX_Z),  (-0.00,  0.15, _DISK_Z), (0.15,  0.15, _BOX_Z),
+# 3×3 toy grid in front of the bowls, within table footprint (±0.4 m)
+_TOY_XY = [
+    (-0.15, -0.10), (0.00, -0.10), (0.15, -0.10),
+    (-0.15,  0.02), (0.00,  0.02), (0.15,  0.02),
+    (-0.15,  0.13), (0.00,  0.13), (0.15,  0.13),
 ]
+_TOY_POSITIONS = [(*xy, _TZ) for xy in _TOY_XY]
 
 
 @configclass
 class ToySortingSceneCfg(InteractiveSceneCfg):
-    """Scene: table, SO-ARM 101, 3 colored trays, 9 toys."""
+    """Table + SO-ARM 101 + 3 colored bowls + 9 colored toy boxes."""
 
     ground = AssetBaseCfg(
         prim_path="/World/ground",
         spawn=sim_utils.GroundPlaneCfg(),
-        init_state=AssetBaseCfg.InitialStateCfg(pos=(0.0, 0.0, -1.05)),
+        init_state=AssetBaseCfg.InitialStateCfg(pos=(0.0, 0.0, -0.85)),
     )
     light = AssetBaseCfg(
         prim_path="/World/light",
         spawn=sim_utils.DomeLightCfg(intensity=2000.0, color=(0.9, 0.9, 1.0)),
     )
 
-    # Table: authored in metres (metersPerUnit=1.0) → use scale=1.0
+    # Table: lower by 0.80 m so the top face lands exactly at world z=0
     table = AssetBaseCfg(
         prim_path="{ENV_REGEX_NS}/Table",
         spawn=sim_utils.UsdFileCfg(usd_path=_TABLE_USD, scale=(1.0, 1.0, 1.0)),
-        init_state=AssetBaseCfg.InitialStateCfg(pos=(0.0, 0.0, 0.0)),
+        init_state=AssetBaseCfg.InitialStateCfg(pos=(0.0, 0.0, -0.80)),
     )
 
     robot: ArticulationCfg = make_so_arm101_cfg(_ROBOT_URDF).replace(
         prim_path="{ENV_REGEX_NS}/Robot"
     )
 
-    # Trays: authored in cm (metersPerUnit=0.01) → scale=0.01 gives real-world 22×33 cm
-    tray_red = AssetBaseCfg(
-        prim_path="{ENV_REGEX_NS}/Tray_0",
-        spawn=sim_utils.UsdFileCfg(usd_path=_TRAY_USD, scale=(0.01, 0.01, 0.01)),
-        init_state=AssetBaseCfg.InitialStateCfg(pos=(-0.20, 0.15, _TRAY_Z)),
+    # Bowls: Disk USD, scale=1.0 → 14 cm diameter.  Placed at back of table.
+    bowl_red = AssetBaseCfg(
+        prim_path="{ENV_REGEX_NS}/Bowl_0",
+        spawn=sim_utils.UsdFileCfg(usd_path=_BOWL_USD, scale=(1.0, 1.0, 1.0)),
+        init_state=AssetBaseCfg.InitialStateCfg(pos=(-0.20, 0.22, _BZ)),
     )
-    tray_green = AssetBaseCfg(
-        prim_path="{ENV_REGEX_NS}/Tray_1",
-        spawn=sim_utils.UsdFileCfg(usd_path=_TRAY_USD, scale=(0.01, 0.01, 0.01)),
-        init_state=AssetBaseCfg.InitialStateCfg(pos=(0.00, 0.15, _TRAY_Z)),
+    bowl_green = AssetBaseCfg(
+        prim_path="{ENV_REGEX_NS}/Bowl_1",
+        spawn=sim_utils.UsdFileCfg(usd_path=_BOWL_USD, scale=(1.0, 1.0, 1.0)),
+        init_state=AssetBaseCfg.InitialStateCfg(pos=( 0.00, 0.22, _BZ)),
     )
-    tray_blue = AssetBaseCfg(
-        prim_path="{ENV_REGEX_NS}/Tray_2",
-        spawn=sim_utils.UsdFileCfg(usd_path=_TRAY_USD, scale=(0.01, 0.01, 0.01)),
-        init_state=AssetBaseCfg.InitialStateCfg(pos=(0.20, 0.15, _TRAY_Z)),
+    bowl_blue = AssetBaseCfg(
+        prim_path="{ENV_REGEX_NS}/Bowl_2",
+        spawn=sim_utils.UsdFileCfg(usd_path=_BOWL_USD, scale=(1.0, 1.0, 1.0)),
+        init_state=AssetBaseCfg.InitialStateCfg(pos=( 0.20, 0.22, _BZ)),
     )
 
-    # Toys: authored in metres (metersPerUnit=1.0) → scale=0.5 gives ~17×4×9 cm boxes, 7 cm disks
-    toy_0 = AssetBaseCfg(prim_path="{ENV_REGEX_NS}/Toy_0", spawn=sim_utils.UsdFileCfg(usd_path=_BOX_USD,  scale=(0.5, 0.5, 0.5)), init_state=AssetBaseCfg.InitialStateCfg(pos=_TOY_POSITIONS[0]))  # noqa: E501
-    toy_1 = AssetBaseCfg(prim_path="{ENV_REGEX_NS}/Toy_1", spawn=sim_utils.UsdFileCfg(usd_path=_DISK_USD, scale=(0.5, 0.5, 0.5)), init_state=AssetBaseCfg.InitialStateCfg(pos=_TOY_POSITIONS[1]))  # noqa: E501
-    toy_2 = AssetBaseCfg(prim_path="{ENV_REGEX_NS}/Toy_2", spawn=sim_utils.UsdFileCfg(usd_path=_BOX_USD,  scale=(0.5, 0.5, 0.5)), init_state=AssetBaseCfg.InitialStateCfg(pos=_TOY_POSITIONS[2]))  # noqa: E501
-    toy_3 = AssetBaseCfg(prim_path="{ENV_REGEX_NS}/Toy_3", spawn=sim_utils.UsdFileCfg(usd_path=_DISK_USD, scale=(0.5, 0.5, 0.5)), init_state=AssetBaseCfg.InitialStateCfg(pos=_TOY_POSITIONS[3]))  # noqa: E501
-    toy_4 = AssetBaseCfg(prim_path="{ENV_REGEX_NS}/Toy_4", spawn=sim_utils.UsdFileCfg(usd_path=_BOX_USD,  scale=(0.5, 0.5, 0.5)), init_state=AssetBaseCfg.InitialStateCfg(pos=_TOY_POSITIONS[4]))  # noqa: E501
-    toy_5 = AssetBaseCfg(prim_path="{ENV_REGEX_NS}/Toy_5", spawn=sim_utils.UsdFileCfg(usd_path=_DISK_USD, scale=(0.5, 0.5, 0.5)), init_state=AssetBaseCfg.InitialStateCfg(pos=_TOY_POSITIONS[5]))  # noqa: E501
-    toy_6 = AssetBaseCfg(prim_path="{ENV_REGEX_NS}/Toy_6", spawn=sim_utils.UsdFileCfg(usd_path=_BOX_USD,  scale=(0.5, 0.5, 0.5)), init_state=AssetBaseCfg.InitialStateCfg(pos=_TOY_POSITIONS[6]))  # noqa: E501
-    toy_7 = AssetBaseCfg(prim_path="{ENV_REGEX_NS}/Toy_7", spawn=sim_utils.UsdFileCfg(usd_path=_DISK_USD, scale=(0.5, 0.5, 0.5)), init_state=AssetBaseCfg.InitialStateCfg(pos=_TOY_POSITIONS[7]))  # noqa: E501
-    toy_8 = AssetBaseCfg(prim_path="{ENV_REGEX_NS}/Toy_8", spawn=sim_utils.UsdFileCfg(usd_path=_BOX_USD,  scale=(0.5, 0.5, 0.5)), init_state=AssetBaseCfg.InitialStateCfg(pos=_TOY_POSITIONS[8]))  # noqa: E501
+    # Toys: Box USD, scale=0.3 → ~10×3×5 cm blocks.  3×3 grid in front of bowls.
+    toy_0 = AssetBaseCfg(prim_path="{ENV_REGEX_NS}/Toy_0", spawn=sim_utils.UsdFileCfg(usd_path=_TOY_USD, scale=(0.3, 0.3, 0.3)), init_state=AssetBaseCfg.InitialStateCfg(pos=_TOY_POSITIONS[0]))  # noqa: E501
+    toy_1 = AssetBaseCfg(prim_path="{ENV_REGEX_NS}/Toy_1", spawn=sim_utils.UsdFileCfg(usd_path=_TOY_USD, scale=(0.3, 0.3, 0.3)), init_state=AssetBaseCfg.InitialStateCfg(pos=_TOY_POSITIONS[1]))  # noqa: E501
+    toy_2 = AssetBaseCfg(prim_path="{ENV_REGEX_NS}/Toy_2", spawn=sim_utils.UsdFileCfg(usd_path=_TOY_USD, scale=(0.3, 0.3, 0.3)), init_state=AssetBaseCfg.InitialStateCfg(pos=_TOY_POSITIONS[2]))  # noqa: E501
+    toy_3 = AssetBaseCfg(prim_path="{ENV_REGEX_NS}/Toy_3", spawn=sim_utils.UsdFileCfg(usd_path=_TOY_USD, scale=(0.3, 0.3, 0.3)), init_state=AssetBaseCfg.InitialStateCfg(pos=_TOY_POSITIONS[3]))  # noqa: E501
+    toy_4 = AssetBaseCfg(prim_path="{ENV_REGEX_NS}/Toy_4", spawn=sim_utils.UsdFileCfg(usd_path=_TOY_USD, scale=(0.3, 0.3, 0.3)), init_state=AssetBaseCfg.InitialStateCfg(pos=_TOY_POSITIONS[4]))  # noqa: E501
+    toy_5 = AssetBaseCfg(prim_path="{ENV_REGEX_NS}/Toy_5", spawn=sim_utils.UsdFileCfg(usd_path=_TOY_USD, scale=(0.3, 0.3, 0.3)), init_state=AssetBaseCfg.InitialStateCfg(pos=_TOY_POSITIONS[5]))  # noqa: E501
+    toy_6 = AssetBaseCfg(prim_path="{ENV_REGEX_NS}/Toy_6", spawn=sim_utils.UsdFileCfg(usd_path=_TOY_USD, scale=(0.3, 0.3, 0.3)), init_state=AssetBaseCfg.InitialStateCfg(pos=_TOY_POSITIONS[6]))  # noqa: E501
+    toy_7 = AssetBaseCfg(prim_path="{ENV_REGEX_NS}/Toy_7", spawn=sim_utils.UsdFileCfg(usd_path=_TOY_USD, scale=(0.3, 0.3, 0.3)), init_state=AssetBaseCfg.InitialStateCfg(pos=_TOY_POSITIONS[7]))  # noqa: E501
+    toy_8 = AssetBaseCfg(prim_path="{ENV_REGEX_NS}/Toy_8", spawn=sim_utils.UsdFileCfg(usd_path=_TOY_USD, scale=(0.3, 0.3, 0.3)), init_state=AssetBaseCfg.InitialStateCfg(pos=_TOY_POSITIONS[8]))  # noqa: E501

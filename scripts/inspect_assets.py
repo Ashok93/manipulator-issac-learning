@@ -23,7 +23,8 @@ for name, path in FILES.items():
         continue
 
     stage = Usd.Stage.Open(str(path))
-    mpu   = UsdGeom.GetStageMetersPerUnit(stage)
+    mpu      = UsdGeom.GetStageMetersPerUnit(stage)
+    up_axis  = UsdGeom.GetStageUpAxis(stage)
 
     bbox_cache = UsdGeom.BBoxCache(Usd.TimeCode.Default(), [UsdGeom.Tokens.default_])
     bbox  = bbox_cache.ComputeWorldBound(stage.GetPseudoRoot())
@@ -31,12 +32,23 @@ for name, path in FILES.items():
     mn, mx = rng.GetMin(), rng.GetMax()
     size  = (mx[0]-mn[0], mx[1]-mn[1], mx[2]-mn[2])
 
+    # Isaac Sim is Z-up. If asset is Y-up, Isaac converts Y→Z (rotates -90° around X).
+    # After conversion: asset_Y becomes world_Z (height), asset_Z becomes world_-Y.
+    if up_axis == UsdGeom.Tokens.y:
+        up_idx, up_label = 1, "Y (will be converted to Z by Isaac Sim)"
+    else:
+        up_idx, up_label = 2, "Z (matches Isaac Sim, no conversion needed)"
+
+    height_in_usd  = size[up_idx]
+    surface_in_usd = mx[up_idx]   # top of the bounding box in the up direction
+
     print(f"\n=== {name} ===")
+    print(f"  upAxis        : {up_axis}  →  {up_label}")
     print(f"  metersPerUnit : {mpu}")
-    print(f"  bbox min (USD units): ({mn[0]:.1f}, {mn[1]:.1f}, {mn[2]:.1f})")
-    print(f"  bbox max (USD units): ({mx[0]:.1f}, {mx[1]:.1f}, {mx[2]:.1f})")
-    print(f"  size (USD units)    : ({size[0]:.1f}, {size[1]:.1f}, {size[2]:.1f})")
-    print(f"  => real-world size  : ({size[0]*mpu:.3f}m, {size[1]*mpu:.3f}m, {size[2]*mpu:.3f}m)")
-    print(f"  => at scale=0.01    : ({size[0]*0.01:.3f}m, {size[1]*0.01:.3f}m, {size[2]*0.01:.3f}m)")
-    print(f"  origin z={mn[2]:.1f} → surface at z_usd={mx[2]:.1f}")
-    print(f"  surface @ scale=0.01: z = {mx[2]*0.01:.3f}m  (if base placed at world z=0)")
+    print(f"  bbox min      : ({mn[0]:.3f}, {mn[1]:.3f}, {mn[2]:.3f})")
+    print(f"  bbox max      : ({mx[0]:.3f}, {mx[1]:.3f}, {mx[2]:.3f})")
+    print(f"  size (x,y,z)  : ({size[0]:.3f}, {size[1]:.3f}, {size[2]:.3f})")
+    print(f"  HEIGHT axis   : {'Y' if up_idx==1 else 'Z'} = {height_in_usd:.3f} USD units")
+    print(f"  surface (top) : {surface_in_usd:.3f} USD units")
+    print(f"  => at scale=1.0: surface at world_Z = {surface_in_usd * mpu:.4f} m")
+    print(f"  => REAL size (W x D x H): {size[0]*mpu:.3f} x {size[2 if up_idx==1 else 1]*mpu:.3f} x {height_in_usd*mpu:.3f} m")
