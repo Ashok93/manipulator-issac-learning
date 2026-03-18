@@ -29,7 +29,7 @@ import torch
 # ---------------------------------------------------------------------------
 # Asset path helpers
 # ---------------------------------------------------------------------------
-_REPO_ROOT = Path(__file__).resolve().parents[4]
+_REPO_ROOT = Path(__file__).resolve().parents[3]
 _ASSETS = _REPO_ROOT / "assets" / "toy_sorting"
 
 
