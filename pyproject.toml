@@ -30,6 +30,10 @@ sim = [
 environments = [
     "sys_platform == 'linux' and python_version == '3.11'",
 ]
+# pywin32 is Windows-only but some transitive dep omits the platform marker.
+override-dependencies = [
+    "pywin32 ; sys_platform == 'win32'",
+]
 
 [tool.uv.sources]
 # isaacsim is pulled in transitively by isaaclab[isaacsim,all] — route it to nvidia PyPI.
