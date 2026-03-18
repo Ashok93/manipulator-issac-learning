@@ -162,11 +162,12 @@ def download() -> None:
     from huggingface_hub import snapshot_download
 
     print(f"Downloading assets from {HF_ENV_REPO} → {OUT_DIR}")
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    # local_dir=REPO_ROOT so the repo path assets/toy_sorting/... maps to
+    # REPO_ROOT/assets/toy_sorting/... without double-nesting.
     snapshot_download(
         repo_id=HF_ENV_REPO,
         repo_type="model",
-        local_dir=str(OUT_DIR),
+        local_dir=str(REPO_ROOT),
         allow_patterns=["assets/toy_sorting/**"],
     )
     print("Download complete.")
