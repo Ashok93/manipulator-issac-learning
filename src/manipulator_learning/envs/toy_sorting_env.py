@@ -87,15 +87,11 @@ class ToySortingEnv:
             print(f"[WARN] _apply_color({prim_path}): {exc}")
 
     def _apply_colors(self) -> None:
-        # With InteractiveScene + num_envs=1, env prefix is /World/envs/env_0
+        # Prim paths follow Isaac Lab naming: /World/envs/env_0/<PrimName>
         env_prefix = "/World/envs/env_0"
         tray_colors = [(0.85, 0.15, 0.15), (0.15, 0.80, 0.20), (0.20, 0.35, 0.90)]
-        for i, name in enumerate(self.TRAY_NAMES):
-            self._apply_color(f"{env_prefix}/{name.replace('_', '_').capitalize().replace('_', '_')}", tray_colors[i])
-        # Tray prims follow Isaac Lab naming from scene cfg field names
-        tray_prim_names = ["Tray_0", "Tray_1", "Tray_2"]
-        for i, tname in enumerate(tray_prim_names):
-            self._apply_color(f"{env_prefix}/{tname}", tray_colors[i])
+        for i in range(len(tray_colors)):
+            self._apply_color(f"{env_prefix}/Tray_{i}", tray_colors[i])
         for i in range(self.cfg.num_toys):
             color_idx = self._toy_color_assignments[i]
             self._apply_color(f"{env_prefix}/Toy_{i}", self.cfg.colors[color_idx])
