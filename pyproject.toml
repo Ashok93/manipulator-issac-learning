@@ -3,26 +3,22 @@ name = "manipulator-isaac-learning"
 version = "0.1.0"
 description = "Simulation-first manipulation learning with Isaac Lab + LeRobot"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = "==3.11.*"
 dependencies = [
     "numpy>=1.26.0",
     "python-dotenv>=1.0.0",
 ]
 
 [project.optional-dependencies]
+# Sim: runs natively on the host VM (not in Docker).
+# isaaclab[isaacsim,all] pulls in isaacsim 5.x from pypi.nvidia.com automatically.
+# Per: https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/isaaclab_pip_installation.html
 sim = [
-    # Isaac Sim — pip package from NVIDIA, bundles its own CUDA runtime
-    "isaacsim[all,extscache]==5.1.0",
-    # Isaac Lab — installed from source via git
-    "isaaclab",
-    # PyTorch (CUDA 12.8)
-    "torch==2.7.0",
-    "torchvision==0.22.0",
-    # Project extras
+    "isaaclab[isaacsim,all]==2.3.2.post1",
     "huggingface_hub>=0.23.0",
     "pyzmq>=26.0.0",
-    "gymnasium==1.2.1",
 ]
+# Train: runs in Docker (Python 3.12). See Dockerfile.
 train = [
     "torch>=2.3.0",
     "torchvision>=0.18.0",
@@ -35,23 +31,19 @@ train = [
 # uv configuration
 # ---------------------------------------------------------------------------
 
+[tool.uv]
+# Solve only for the Linux/3.11 target where Isaac Sim runs.
+environments = [
+    "sys_platform == 'linux' and python_version == '3.11'",
+]
+
 [tool.uv.sources]
-# isaacsim lives on NVIDIA's PyPI index
+# isaacsim is pulled in transitively by isaaclab[isaacsim,all] — route it to nvidia PyPI.
 isaacsim = [{ index = "nvidia" }]
-# isaaclab installed from git source (no PyPI release)
-isaaclab = { git = "https://github.com/isaac-sim/IsaacLab.git", subdirectory = "source/isaaclab" }
-# PyTorch with CUDA 12.8
-torch = [{ index = "pytorch-cu128" }]
-torchvision = [{ index = "pytorch-cu128" }]
 
 [[tool.uv.index]]
 name = "nvidia"
 url = "https://pypi.nvidia.com"
-explicit = true
-
-[[tool.uv.index]]
-name = "pytorch-cu128"
-url = "https://download.pytorch.org/whl/cu128"
 explicit = true
 
 # ---------------------------------------------------------------------------
