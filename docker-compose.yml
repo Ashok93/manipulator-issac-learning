@@ -1,0 +1,18 @@
+services:
+  sim:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      ACCEPT_EULA: "Y"
+      OMNI_KIT_ACCEPT_EULA: "YES"
+      DISPLAY: ${DISPLAY:-:0}
+      NVIDIA_VISIBLE_DEVICES: "all"
+      NVIDIA_DRIVER_CAPABILITIES: "all"
+    volumes:
+      - .:/workspace:rw
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    runtime: nvidia
+    shm_size: "4gb"
+    stdin_open: true
+    tty: true
