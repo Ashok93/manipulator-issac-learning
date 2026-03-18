@@ -33,7 +33,7 @@ def main() -> None:
     scene = InteractiveScene(scene_cfg)
 
     # Pump the event loop so the renderer finishes initializing before sim.reset()
-    for _ in range(10):
+    for _ in range(50):
         simulation_app.update()
 
     print("[test_robot] Calling sim.reset() ...")
