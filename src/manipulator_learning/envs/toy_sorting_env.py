@@ -118,11 +118,7 @@ class ToySortingEnv:
 
     def _setup_scene(self) -> None:
         """Build the USD stage: ground, lights, table, robot, trays, toys."""
-        try:
-            self._setup_scene_isaac()
-        except ImportError:
-            # Headless / unit-test mode — skip USD setup.
-            print("[ToySortingEnv] Isaac Sim not available; running in stub mode.")
+        self._setup_scene_isaac()
 
     def _setup_scene_isaac(self) -> None:
         import isaaclab.sim as sim_utils

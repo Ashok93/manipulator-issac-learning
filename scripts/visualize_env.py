@@ -1,17 +1,18 @@
 """Run the toy-sorting environment for 600 steps with random joint actions.
 
-Launch via Isaac Sim's Python runtime:
-    /isaac-sim/python.sh /workspace/scripts/visualize_env.py [--headless] [--steps N]
+Isaac Sim's SimulationApp MUST be created before any omni.* / isaaclab imports.
+This script follows the standard Isaac Sim application pattern.
 
-Or from a local Python with Isaac Sim on PYTHONPATH:
-    python scripts/visualize_env.py
+Usage:
+    uv run python scripts/visualize_env.py             # with GUI
+    uv run python scripts/visualize_env.py --headless  # headless
+    uv run python scripts/visualize_env.py --headless --steps 100
 """
 
 from __future__ import annotations
 
 import argparse
 import sys
-import time
 from pathlib import Path
 
 # Ensure the repo src/ is importable when running directly (no install).
@@ -31,6 +32,16 @@ def _parse_args() -> argparse.Namespace:
 def main() -> None:
     args = _parse_args()
 
+    # ------------------------------------------------------------------ #
+    # 1. Start Isaac Sim — must happen before ANY omni.* / isaaclab import #
+    # ------------------------------------------------------------------ #
+    from isaacsim import SimulationApp
+    simulation_app = SimulationApp({"headless": args.headless})
+
+    # ------------------------------------------------------------------ #
+    # 2. Now safe to import Isaac Lab / omni modules                       #
+    # ------------------------------------------------------------------ #
+    import torch
     from manipulator_learning.envhub import make_env
 
     print("[visualize_env] Creating ToySortingEnv …")
@@ -41,11 +52,8 @@ def main() -> None:
     obs, _ = env.reset()
     print(f"[visualize_env] Observation keys: {list(obs.keys())}")
 
-    import torch
-
     print(f"[visualize_env] Running {args.steps} random-action steps …")
     for step in range(args.steps):
-        # 6-DOF SO-ARM 101: random joint targets in [-1, 1] rad
         action = torch.zeros(6).uniform_(-0.5, 0.5)
         obs, reward, terminated, truncated, info = env.step(action)
 
@@ -56,7 +64,10 @@ def main() -> None:
         if step % 100 == 0:
             print(f"[visualize_env] step {step}/{args.steps}")
 
+        simulation_app.update()  # pump the render loop
+
     env.close()
+    simulation_app.close()
     print("[visualize_env] Done.")
 
 
