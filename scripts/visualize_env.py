@@ -51,12 +51,22 @@ def main() -> None:
     sim_cfg = SimulationCfg(dt=0.01)
     sim = SimulationContext(sim_cfg)
 
+    # Point camera at the table (x=2m back, z=1.5m up, looking at origin)
+    sim.set_camera_view(eye=[1.5, -1.5, 1.5], target=[0.0, 0.0, 0.5])
+
     print("[visualize_env] Creating ToySortingEnv …")
     envs_dict = make_env(n_envs=1)
     env = envs_dict["toy_sorting"][0]
 
     print("[visualize_env] Resetting …")
     sim.reset()
+
+    # Debug: list top-level stage prims so we know what's loaded
+    import omni.usd
+    stage = omni.usd.get_context().get_stage()
+    prims = [str(p.GetPath()) for p in stage.Traverse()]
+    print(f"[visualize_env] Stage prims ({len(prims)}): {prims[:20]}")
+
     obs, _ = env.reset()
     print(f"[visualize_env] Observation keys: {list(obs.keys())}")
 
