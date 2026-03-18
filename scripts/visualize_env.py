@@ -1,14 +1,12 @@
-"""Run the toy-sorting environment for 600 steps with random joint actions.
+"""Run the toy-sorting environment for N steps with random joint actions.
 
-Follows the official Isaac Lab standalone script pattern:
-  1. Parse args and add AppLauncher args
-  2. Launch AppLauncher (starts Isaac Sim)
-  3. Import isaaclab.* modules ONLY after app is running
-  4. Run the environment loop
+Follows the same pattern as the SO-ARM teleop script:
+  1. AppLauncher → SimulationContext → InteractiveScene
+  2. sim.reset() → scene.reset() → run loop
 
 Usage:
+    uv run python scripts/visualize_env.py
     uv run python scripts/visualize_env.py --headless
-    uv run python scripts/visualize_env.py             # with GUI
 """
 
 from __future__ import annotations
@@ -23,66 +21,53 @@ if str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
 # ---------------------------------------------------------------------------
-# 1. Parse args — AppLauncher adds --headless, --livestream, --enable_cameras
+# 1. AppLauncher — before any isaaclab.* import
 # ---------------------------------------------------------------------------
 parser = argparse.ArgumentParser(description="Visualise the toy-sorting scene.")
-parser.add_argument("--steps", type=int, default=600, help="Number of sim steps.")
-
-from isaaclab.app import AppLauncher  # noqa: E402
-AppLauncher.add_app_launcher_args(parser)
+parser.add_argument("--steps", type=int, default=600)
+parser.add_argument("--headless", action="store_true")
 args_cli = parser.parse_args()
 
-# ---------------------------------------------------------------------------
-# 2. Launch Isaac Sim — must happen before ANY isaaclab.* import
-# ---------------------------------------------------------------------------
-app_launcher = AppLauncher(args_cli)
+from isaaclab.app import AppLauncher  # noqa: E402
+app_launcher = AppLauncher(headless=args_cli.headless)
 simulation_app = app_launcher.app
 
 # ---------------------------------------------------------------------------
-# 3. Now safe to import Isaac Lab / omni modules
+# 2. Isaac Lab imports (safe after AppLauncher)
 # ---------------------------------------------------------------------------
 import torch  # noqa: E402
-
-from isaaclab.sim import SimulationCfg, SimulationContext  # noqa: E402
+import isaaclab.sim as sim_utils  # noqa: E402
+from isaaclab.sim import SimulationContext  # noqa: E402
 from manipulator_learning.envhub import make_env  # noqa: E402
 
 
 def main() -> None:
-    sim_cfg = SimulationCfg(dt=0.01)
+    sim_cfg = sim_utils.SimulationCfg(dt=1.0 / 60.0)
     sim = SimulationContext(sim_cfg)
-
-    # Point camera at the table (x=2m back, z=1.5m up, looking at origin)
     sim.set_camera_view(eye=[1.5, -1.5, 1.5], target=[0.0, 0.0, 0.5])
 
-    print("[visualize_env] Creating ToySortingEnv …")
+    print("[visualize_env] Building scene …")
     envs_dict = make_env(n_envs=1)
     env = envs_dict["toy_sorting"][0]
 
+    # Reset sim first, then scene (same order as teleop script)
     print("[visualize_env] Resetting …")
     sim.reset()
-
-    # Debug: list top-level stage prims so we know what's loaded
-    import omni.usd
-    stage = omni.usd.get_context().get_stage()
-    prims = [str(p.GetPath()) for p in stage.Traverse()]
-    print(f"[visualize_env] Stage prims ({len(prims)}): {prims[:20]}")
-
     obs, _ = env.reset()
     print(f"[visualize_env] Observation keys: {list(obs.keys())}")
 
-    print(f"[visualize_env] Running {args_cli.steps} random-action steps …")
+    print(f"[visualize_env] Running {args_cli.steps} steps …")
     for step in range(args_cli.steps):
-        action = torch.zeros(6).uniform_(-0.5, 0.5)
+        action = torch.zeros(6).uniform_(-0.3, 0.3)
         obs, reward, terminated, truncated, info = env.step(action)
 
         if terminated.any() or truncated.any():
-            print(f"[visualize_env] Episode ended at step {step}, resetting.")
             obs, _ = env.reset()
+
+        sim.step()
 
         if step % 100 == 0:
             print(f"[visualize_env] step {step}/{args_cli.steps}")
-
-        sim.step()
 
     env.close()
     print("[visualize_env] Done.")
