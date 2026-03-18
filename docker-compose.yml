@@ -1,44 +1,17 @@
 services:
-  sim:
+  train:
+    # Phase 2: LeRobot training + ZMQ client connecting to sim on host
     build:
       context: .
       dockerfile: Dockerfile
     environment:
-      DISPLAY: ${DISPLAY:-:0}
-      ACCEPT_EULA: "Y"
-      PRIVACY_CONSENT: "Y"
-      HF_ENV_REPO: ${HF_ENV_REPO:-AshDash93/toy-sorting-env}
+      ZMQ_SIM_ADDR: ${ZMQ_SIM_ADDR:-tcp://host.docker.internal:5555}
+      HF_TOKEN: ${HF_TOKEN:-}
       NVIDIA_VISIBLE_DEVICES: all
-      NVIDIA_DRIVER_CAPABILITIES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
     volumes:
       - .:/workspace:rw
-      # X11
-      - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      - ${HOME}/.Xauthority:/root/.Xauthority:rw
-      # Isaac Sim shader/kit caches — avoids full rebuild on every run
-      - ~/docker/isaac-sim/cache/kit:/isaac-sim/kit/cache:rw
-      - ~/docker/isaac-sim/cache/ov:/root/.cache/ov:rw
-      - ~/docker/isaac-sim/cache/pip:/root/.cache/pip:rw
-      - ~/docker/isaac-sim/cache/glcache:/root/.cache/nvidia/GLCache:rw
-      - ~/docker/isaac-sim/cache/computecache:/root/.nv/ComputeCache:rw
-      - ~/docker/isaac-sim/logs:/root/.nvidia-omniverse/logs:rw
-      - ~/docker/isaac-sim/data:/root/.local/share/ov/data:rw
-      - ~/docker/isaac-sim/documents:/root/Documents:rw
-      # Asset cache
-      - assets_cache:/workspace/assets/toy_sorting
-    network_mode: host
     runtime: nvidia
     shm_size: "8gb"
     stdin_open: true
     tty: true
-
-  train:
-    # Phase 2 stub — not functional yet.
-    # Will become: lerobot training + ZMQ client connecting to sim:5555
-    image: python:3.12-slim
-    command: ["echo", "Train container - Phase 2 not yet implemented"]
-    environment:
-      ZMQ_SIM_ADDR: "tcp://sim:5555"
-
-volumes:
-  assets_cache:

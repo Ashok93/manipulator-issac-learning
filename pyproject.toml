@@ -4,14 +4,24 @@ version = "0.1.0"
 description = "Simulation-first manipulation learning with Isaac Lab + LeRobot"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = ["numpy>=1.26.0", "python-dotenv>=1.0.0"]
+dependencies = [
+    "numpy>=1.26.0",
+    "python-dotenv>=1.0.0",
+]
 
 [project.optional-dependencies]
 sim = [
+    # Isaac Sim — pip package from NVIDIA, bundles its own CUDA runtime
+    "isaacsim[all,extscache]==5.1.0",
+    # Isaac Lab — installed from source via git
+    "isaaclab",
+    # PyTorch (CUDA 12.8)
+    "torch==2.7.0",
+    "torchvision==0.22.0",
+    # Project extras
     "huggingface_hub>=0.23.0",
     "pyzmq>=26.0.0",
-    "gymnasium>=0.29.0",
-    "numpy>=1.26.0",
+    "gymnasium==1.2.1",
 ]
 train = [
     "torch>=2.3.0",
@@ -19,8 +29,34 @@ train = [
     "lerobot>=0.4.1",
     "pyzmq>=26.0.0",
     "gymnasium>=0.29.0",
-    "numpy>=1.26.0",
 ]
+
+# ---------------------------------------------------------------------------
+# uv configuration
+# ---------------------------------------------------------------------------
+
+[tool.uv.sources]
+# isaacsim lives on NVIDIA's PyPI index
+isaacsim = [{ index = "nvidia" }]
+# isaaclab installed from git source (no PyPI release)
+isaaclab = { git = "https://github.com/isaac-sim/IsaacLab.git", subdirectory = "source/isaaclab" }
+# PyTorch with CUDA 12.8
+torch = [{ index = "pytorch-cu128" }]
+torchvision = [{ index = "pytorch-cu128" }]
+
+[[tool.uv.index]]
+name = "nvidia"
+url = "https://pypi.nvidia.com"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+# ---------------------------------------------------------------------------
+# Build
+# ---------------------------------------------------------------------------
 
 [build-system]
 requires = ["setuptools>=68"]
