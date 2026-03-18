@@ -38,6 +38,7 @@ def main() -> None:
         ground = AssetBaseCfg(
             prim_path="/World/ground",
             spawn=sim_utils.GroundPlaneCfg(),
+            init_state=AssetBaseCfg.InitialStateCfg(pos=(0.0, 0.0, -1.05)),
         )
         light = AssetBaseCfg(
             prim_path="/World/light",
