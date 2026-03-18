@@ -9,3 +9,9 @@ datasets/
 outputs/
 wandb/
 logs/
+.env
+Lightwheel_Xx8T7EPOMd_KitchenRoom/
+assets/toy_sorting/
+so_arm101/
+.gitignore
+.cache/

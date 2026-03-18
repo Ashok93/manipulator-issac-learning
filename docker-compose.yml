@@ -2,35 +2,30 @@ services:
   sim:
     build:
       context: .
-      dockerfile: Dockerfile.sim
-      args:
-        SIM_BASE_IMAGE: ${SIM_BASE_IMAGE:-nvidia/cuda:12.8.0-devel-ubuntu22.04}
+      dockerfile: Dockerfile
     environment:
-      ACCEPT_EULA: "Y"
-      OMNI_KIT_ACCEPT_EULA: "YES"
       DISPLAY: ${DISPLAY:-:0}
+      HF_ENV_REPO: ${HF_ENV_REPO:-AshDash93/toy-sorting-env}
       NVIDIA_VISIBLE_DEVICES: "all"
       NVIDIA_DRIVER_CAPABILITIES: "all"
+      ACCEPT_EULA: "Y"
+      OMNI_KIT_ACCEPT_EULA: "YES"
     volumes:
       - .:/workspace:rw
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - assets_cache:/workspace/assets/toy_sorting
     runtime: nvidia
-    shm_size: "4gb"
+    shm_size: "8gb"
     stdin_open: true
     tty: true
 
   train:
-    build:
-      context: .
-      dockerfile: Dockerfile.train
-      args:
-        TRAIN_BASE_IMAGE: ${TRAIN_BASE_IMAGE:-pytorch/pytorch:2.7.0-cuda12.8-cudnn9-runtime}
+    # Phase 2 stub — not functional yet.
+    # Will become: lerobot training + ZMQ client connecting to sim:5555
+    image: python:3.12-slim
+    command: echo "Train container: Phase 2 not yet implemented"
     environment:
-      NVIDIA_VISIBLE_DEVICES: "all"
-      NVIDIA_DRIVER_CAPABILITIES: "compute,utility"
-    volumes:
-      - .:/workspace:rw
-    runtime: nvidia
-    shm_size: "4gb"
-    stdin_open: true
-    tty: true
+      ZMQ_SIM_ADDR: "tcp://sim:5555"
+
+volumes:
+  assets_cache:

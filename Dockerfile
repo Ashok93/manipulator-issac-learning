@@ -1,62 +1,17 @@
-ARG SIM_BASE_IMAGE=nvidia/cuda:12.8.0-devel-ubuntu22.04
-FROM ${SIM_BASE_IMAGE}
+# Single Dockerfile for the sim container.
+# Base image ships Isaac Lab 2.3.2 (Python 3.11) with Isaac Sim pre-installed.
+FROM nvcr.io/nvidia/isaac-lab:2.3.2
 
-SHELL ["/bin/bash", "-lc"]
-
-USER root
-RUN mkdir -p /var/lib/apt/lists/partial \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends \
-        git \
-        curl \
-        ca-certificates \
-        build-essential \
-        cmake \
-        pkg-config \
-        libgl1 \
-        libglib2.0-0 \
-        libsm6 \
-        libxext6 \
-        libxrender1 \
-        libxi6 \
-        libxrandr2 \
-        libxss1 \
-        libxtst6 \
-        libatk1.0-0 \
-        libgtk-3-0 \
-        libnss3 \
-        libasound2 \
-        libxdamage1 \
-        libxfixes3 \
-        libxkbcommon0 \
-        libxkbcommon-x11-0 \
-        libdrm2 \
-        libegl1 \
-        libglvnd0 \
-        ffmpeg \
-        libavformat-dev \
-        libavcodec-dev \
-        libavdevice-dev \
-        libavutil-dev \
-        libswscale-dev \
-        libswresample-dev \
-        libavfilter-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-ENV PATH="/root/.local/bin:${PATH}"
-RUN uv python install 3.11 \
-    && uv venv /opt/venv --python 3.11
-ENV VIRTUAL_ENV=/opt/venv
-ENV PATH="/opt/venv/bin:${PATH}"
-
+# Install our package and sim extras into the Isaac Lab Python environment.
+# Isaac Sim uses /isaac-sim/python.sh which activates its own venv; we install
+# into that same site-packages so imports work without PYTHONPATH tricks.
 WORKDIR /workspace
-COPY pyproject.toml requirements-sim.txt /workspace/
-RUN uv pip install "pip<25" "setuptools<70" "wheel" "wheel_stub"
-RUN uv pip install --no-build-isolation --prerelease=allow \
-    --index-url https://pypi.nvidia.com/ \
-    --extra-index-url https://pypi.org/simple \
-    -r /workspace/requirements-sim.txt
 
-ENV PYTHONPATH=/workspace/src
-CMD ["bash"]
+# Copy package metadata only (assets are volume-mounted, never COPYed).
+COPY pyproject.toml ./
+COPY src/ ./src/
+
+RUN /isaac-sim/python.sh -m pip install --no-cache-dir -e ".[sim]"
+
+# Default: drop into an interactive shell so users can run scripts manually.
+CMD ["/bin/bash"]
