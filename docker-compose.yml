@@ -23,7 +23,7 @@ services:
     # Phase 2 stub — not functional yet.
     # Will become: lerobot training + ZMQ client connecting to sim:5555
     image: python:3.12-slim
-    command: echo "Train container: Phase 2 not yet implemented"
+    command: ["echo", "Train container - Phase 2 not yet implemented"]
     environment:
       ZMQ_SIM_ADDR: "tcp://sim:5555"
 
