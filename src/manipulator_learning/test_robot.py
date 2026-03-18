@@ -1,4 +1,4 @@
-"""Minimal robot test — mirrors teleop.py structure exactly."""
+"""Entry point for test_robot — delegates to scripts/test_robot.py:main."""
 
 from __future__ import annotations
 
@@ -43,7 +43,3 @@ def main() -> None:
         scene.update(sim.get_physics_dt())
 
     simulation_app.close()
-
-
-if __name__ == "__main__":
-    main()

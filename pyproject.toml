@@ -48,6 +48,9 @@ explicit = true
 # Build
 # ---------------------------------------------------------------------------
 
+[project.scripts]
+test-robot = "manipulator_learning.test_robot:main"
+
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
