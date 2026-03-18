@@ -74,15 +74,27 @@ class ToySortingEnv:
     def _apply_color(self, prim_path: str, color_rgb: tuple) -> None:
         try:
             import omni.usd
-            from pxr import Gf, UsdGeom
+            from pxr import Gf, Usd, UsdGeom
             stage = omni.usd.get_context().get_stage()
             prim = stage.GetPrimAtPath(prim_path)
             if not prim.IsValid():
                 return
-            for child in prim.GetAllChildren():
-                gprim = UsdGeom.Gprim(child)
-                if gprim:
-                    gprim.GetDisplayColorAttr().Set([Gf.Vec3f(*color_rgb)])
+            for desc_prim in Usd.PrimRange(prim):
+                gprim = UsdGeom.Gprim(desc_prim)
+                if not gprim:
+                    continue
+                color_attr = gprim.GetDisplayColorAttr()
+                color_attr.Set([Gf.Vec3f(*color_rgb)])
+                interp_attr = desc_prim.GetAttribute("primvars:displayColor:interpolation")
+                if interp_attr:
+                    interp_attr.Set(UsdGeom.Tokens.constant)
+                else:
+                    pv = UsdGeom.PrimvarsAPI(desc_prim).CreatePrimvar(
+                        "displayColor",
+                        Gf.Vec3f,
+                        UsdGeom.Tokens.constant,
+                    )
+                    pv.Set([Gf.Vec3f(*color_rgb)])
         except Exception as exc:
             print(f"[WARN] _apply_color({prim_path}): {exc}")
 
