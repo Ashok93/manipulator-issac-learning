@@ -17,3 +17,4 @@ assets/toy_sorting/
 so_arm101/
 .gitignore
 .cache/
+*.egg-info/

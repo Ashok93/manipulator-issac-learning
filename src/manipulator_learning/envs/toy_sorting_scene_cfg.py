@@ -19,9 +19,17 @@ from isaaclab.utils import configclass
 
 from manipulator_learning.envs.so_arm101_cfg import make_so_arm101_cfg
 
-_REPO_ROOT = Path(__file__).resolve().parents[3]
+
+def _find_repo_root() -> Path:
+    """Walk up from this file until we find pyproject.toml (repo root sentinel)."""
+    for parent in Path(__file__).resolve().parents:
+        if (parent / "pyproject.toml").exists():
+            return parent
+    raise RuntimeError("Could not locate repo root (pyproject.toml not found)")
+
+
+_REPO_ROOT = _find_repo_root()
 _ASSETS    = _REPO_ROOT / "assets" / "toy_sorting"
-_KIT1      = _ASSETS / "Kit1"
 
 
 def _asset(rel: str) -> str:
