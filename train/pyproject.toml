@@ -5,7 +5,7 @@ description = "LeRobot data collection and training for manipulator toy-sorting"
 requires-python = "==3.12.*"
 dependencies = [
     "lerobot>=0.5.0",
-    "hebi>=3.0.0",
+    "hebi>=0.2.0",
     "pyzmq>=26.0.0",
     "msgpack>=1.0.0",
     "numpy>=1.26.0",
