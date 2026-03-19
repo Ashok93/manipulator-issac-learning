@@ -12,6 +12,7 @@ wandb/
 logs/
 .env
 Lightwheel_Xx8T7EPOMd_KitchenRoom/
+lightwheel_toyroom/
 assets/toy_sorting/
 so_arm101/
 .gitignore

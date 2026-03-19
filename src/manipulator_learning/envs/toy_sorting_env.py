@@ -25,8 +25,8 @@ class ToySortingEnvCfg:
 class ToySortingEnv:
     """Toy-sorting environment backed by Isaac Lab InteractiveScene."""
 
-    BOWL_NAMES = ["bowl_red", "bowl_green", "bowl_blue"]
-    TOY_NAMES  = [f"toy_{i}" for i in range(9)]
+    BOX_NAMES = ["box_0", "box_1", "box_2"]
+    TOY_NAMES = [f"toy_{i}" for i in range(9)]
 
     def __init__(self, cfg: ToySortingEnvCfg | None = None):
         self.cfg = cfg or ToySortingEnvCfg()
@@ -56,29 +56,55 @@ class ToySortingEnv:
         self._toy_color_assignments = assignments
 
     def _apply_color(self, prim_path: str, color_rgb: tuple) -> None:
+        """Bind a UsdPreviewSurface material with the given color to every
+        visual mesh under prim_path.
+
+        UsdPreviewSurface is standard USD and works regardless of whether the
+        full Omniverse MDL library is installed (pip-based Isaac Lab included).
+        The material is created once per prim_path and reused/updated on
+        subsequent resets.
+        """
         try:
             import omni.usd
-            from pxr import Gf, Usd, UsdGeom
+            from pxr import Gf, Sdf, Usd, UsdShade
             stage = omni.usd.get_context().get_stage()
             prim = stage.GetPrimAtPath(prim_path)
             if not prim.IsValid():
                 print(f"[WARN] prim not found: {prim_path}")
                 return
+
+            # Deterministic material path derived from the prim path
+            safe_name = prim_path.replace("/", "_").lstrip("_")
+            mat_path = f"/World/Looks/{safe_name}"
+
+            mat_prim = stage.GetPrimAtPath(mat_path)
+            if mat_prim.IsValid():
+                # Material already exists — just update the diffuse color
+                shader = UsdShade.Shader(stage.GetPrimAtPath(f"{mat_path}/Shader"))
+                shader.GetInput("diffuseColor").Set(Gf.Vec3f(*color_rgb))
+            else:
+                # First reset: create a new UsdPreviewSurface material
+                mat = UsdShade.Material.Define(stage, mat_path)
+                shader = UsdShade.Shader.Define(stage, f"{mat_path}/Shader")
+                shader.CreateIdAttr("UsdPreviewSurface")
+                shader.CreateInput("diffuseColor", Sdf.ValueTypeNames.Color3f).Set(Gf.Vec3f(*color_rgb))
+                shader.CreateInput("roughness", Sdf.ValueTypeNames.Float).Set(0.4)
+                mat.CreateSurfaceOutput().ConnectToSource(shader.ConnectableAPI(), "surface")
+
+            # Bind directly to every visual mesh (skipping collision meshes)
+            mat = UsdShade.Material(stage.GetPrimAtPath(mat_path))
             for desc_prim in Usd.PrimRange(prim):
-                gprim = UsdGeom.Gprim(desc_prim)
-                if not gprim:
-                    continue
-                pv = gprim.GetDisplayColorPrimvar()
-                pv.SetInterpolation(UsdGeom.Tokens.constant)
-                pv.Set([Gf.Vec3f(*color_rgb)])
+                if desc_prim.GetTypeName() == "Mesh" and "Collisions" not in str(desc_prim.GetPath()):
+                    UsdShade.MaterialBindingAPI(desc_prim).Bind(mat)
+
         except Exception as exc:
             print(f"[WARN] _apply_color({prim_path}): {exc}")
 
     def _apply_colors(self) -> None:
         env_prefix = "/World/envs/env_0"
-        bowl_colors = [(0.85, 0.15, 0.15), (0.15, 0.80, 0.20), (0.20, 0.35, 0.90)]
-        for i, color in enumerate(bowl_colors):
-            self._apply_color(f"{env_prefix}/Bowl_{i}", color)
+        box_colors = [(0.85, 0.15, 0.15), (0.15, 0.80, 0.20), (0.20, 0.35, 0.90)]
+        for i, color in enumerate(box_colors):
+            self._apply_color(f"{env_prefix}/Box_{i}", color)
         for i in range(self.cfg.num_toys):
             self._apply_color(f"{env_prefix}/Toy_{i}", self.cfg.colors[self._toy_color_assignments[i]])
 

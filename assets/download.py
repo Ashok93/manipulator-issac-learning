@@ -31,6 +31,7 @@ load_dotenv()
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 LIGHTWHEEL_DIR = REPO_ROOT / "Lightwheel_Xx8T7EPOMd_KitchenRoom"
+TOYROOM_DIR    = REPO_ROOT / "lightwheel_toyroom"
 SO_ARM_SRC_DIR = REPO_ROOT / "so_arm101"
 OUT_DIR = REPO_ROOT / "assets" / "toy_sorting"
 
@@ -42,14 +43,23 @@ LIGHTWHEEL_FILES = [
     "Table049/texture/T_Table049_BC001.png",
     "Table049/texture/T_Table049_N001.png",
     "Table049/texture/T_Table049_ORM001.png",
-    "InteractiveAsset/SM_P_Flavour_02/Collected_SM_P_Flavour_02/Props/SM_P_Tray_01.usd",
-    "Kitchen_Other/Kitchen_Box.usd",
-    "Kitchen_Other/Kitchen_Disk001.usd",
-    "Kitchen_Other/Kitchen_Disk002.usd",
 ]
 
-LIGHTWHEEL_GLOBS = [
-    "InteractiveAsset/SM_P_Flavour_02/Collected_SM_P_Flavour_02/Materials/**/*",
+LIGHTWHEEL_GLOBS: list[str] = []
+
+# Files to extract from TOYROOM_DIR/Assets → OUT_DIR/Kit1
+# These are self-contained USDs (no external texture/MDL dependencies).
+TOYROOM_FILES = [
+    "Kit1/Kit1_Box.usd",       # open-top sorting container (15×15×5 cm)
+    "Kit1/Kit1_Cube3x3.usd",   # 3 cm cube
+    "Kit1/Kit1_Cylinder.usd",  # cylinder
+    "Kit1/Kit1_Sphere.usd",    # sphere
+    "Kit1/Kit1_Torus.usd",     # torus / ring
+    "Kit1/Kit1_Triangle.usd",  # triangular prism
+    "Kit1/Kit1_Cross.usd",     # plus / cross shape
+    "Kit1/Kit1_Cuboid6x3.usd", # flat rectangular block
+    "Kit1/Kit1_Bridge.usd",    # arch / bridge shape
+    "Kit1/Kit1_Icosphere.usd", # icosphere
 ]
 
 # Files/dirs to exclude when uploading to HF Hub.
@@ -64,6 +74,7 @@ UPLOAD_IGNORE = [
     ".env",
     "uv.lock",
     "Lightwheel_Xx8T7EPOMd_KitchenRoom/**",
+    "lightwheel_toyroom/**",
     "so_arm101/**",
     ".DS_Store",
     "datasets/**",
@@ -85,27 +96,34 @@ def _copy_file(src: Path, dst: Path) -> None:
 
 def extract() -> None:
     """Copy asset subset into assets/toy_sorting/ from local source packs."""
-    if not LIGHTWHEEL_DIR.exists():
-        sys.exit(
-            f"[ERROR] Lightwheel directory not found: {LIGHTWHEEL_DIR}\n"
-            "Download the pack and place it next to this repo first."
-        )
-
-    print(f"Extracting Lightwheel assets → {OUT_DIR}")
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    for rel in LIGHTWHEEL_FILES:
-        src = LIGHTWHEEL_DIR / rel
-        if not src.exists():
-            print(f"  [WARN] missing: {rel}")
-            continue
-        _copy_file(src, OUT_DIR / rel)
+    # --- Lightwheel kitchen pack (table) ---
+    if not LIGHTWHEEL_DIR.exists():
+        print(f"[WARN] Lightwheel kitchen dir not found: {LIGHTWHEEL_DIR} — skipping table assets")
+    else:
+        print(f"Extracting Lightwheel kitchen assets → {OUT_DIR}")
+        for rel in LIGHTWHEEL_FILES:
+            src = LIGHTWHEEL_DIR / rel
+            if not src.exists():
+                print(f"  [WARN] missing: {rel}")
+                continue
+            _copy_file(src, OUT_DIR / rel)
 
-    for pattern in LIGHTWHEEL_GLOBS:
-        for src in LIGHTWHEEL_DIR.glob(pattern):
-            if src.is_file():
-                _copy_file(src, OUT_DIR / src.relative_to(LIGHTWHEEL_DIR))
+    # --- Lightwheel toyroom pack (Kit1 toys + sorting box) ---
+    if not TOYROOM_DIR.exists():
+        print(f"[WARN] Toyroom dir not found: {TOYROOM_DIR} — skipping Kit1 assets")
+    else:
+        print(f"Extracting Lightwheel toyroom assets → {OUT_DIR}")
+        src_base = TOYROOM_DIR / "Assets"
+        for rel in TOYROOM_FILES:
+            src = src_base / rel
+            if not src.exists():
+                print(f"  [WARN] missing: {rel}")
+                continue
+            _copy_file(src, OUT_DIR / rel)
 
+    # --- SO-ARM 101 URDF ---
     if SO_ARM_SRC_DIR.exists():
         print(f"Extracting SO-ARM 101 URDF → {OUT_DIR}")
         for src in SO_ARM_SRC_DIR.rglob("*"):
@@ -145,12 +163,15 @@ def upload() -> None:
 
     # Step 2: upload binary assets explicitly — bypasses .gitignore entirely
     # because we point folder_path directly at the assets directory.
+    # delete_patterns removes stale files from previous uploads that no longer
+    # exist locally (e.g. old Kitchen_Other/, InteractiveAsset/ folders).
     print("  [2/2] uploading binary assets (USD, STL, PNG) …")
     api.upload_folder(
         repo_id=HF_ENV_REPO,
         repo_type="model",
         folder_path=str(OUT_DIR),
         path_in_repo="assets/toy_sorting",
+        delete_patterns=["assets/toy_sorting/Kitchen_Other/**", "assets/toy_sorting/InteractiveAsset/**"],
         commit_message="Upload binary assets (USD, STL, PNG)",
     )
 
