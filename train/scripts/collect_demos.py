@@ -47,8 +47,8 @@ import zmq
 
 from lerobot.teleoperators.phone import Phone
 from lerobot.teleoperators.phone.config_phone import PhoneConfig, PhoneOS
-from lerobot.common.kinematics import RobotKinematics
-from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
+from lerobot.model.kinematics import RobotKinematics
+from lerobot.datasets.lerobot_dataset import LeRobotDataset
 
 # ---------------------------------------------------------------------------
 # Constants
