@@ -11,4 +11,5 @@ if [ -n "$HEBI_SO" ]; then
     patchelf --clear-execstack "$HEBI_SO"
 fi
 
+source /workspace/train/.venv/bin/activate
 exec "$@"
