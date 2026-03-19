@@ -70,8 +70,8 @@ assets/
   download.py                   # asset extract / upload / download
 scripts/
   visualize_env.py              # run full toy-sorting scene until window closed
+  layout_editor.py              # physics-frozen scene editor; exports layout to USDA
   test_robot.py                 # minimal robot URDF test (no scene assets required)
-  toy_sorting_envhub.py         # backwards-compat wrapper; prefer visualize_env.py
   inspect_assets.py             # inspect USD asset bounding boxes (usd-core only)
 ```
 

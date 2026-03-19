@@ -45,8 +45,6 @@ LIGHTWHEEL_FILES = [
     "Table049/texture/T_Table049_ORM001.png",
 ]
 
-LIGHTWHEEL_GLOBS: list[str] = []
-
 # Files to extract from TOYROOM_DIR/Assets → OUT_DIR/Kit1
 # These are self-contained USDs (no external texture/MDL dependencies).
 TOYROOM_FILES = [
@@ -127,12 +125,27 @@ def extract() -> None:
     if SO_ARM_SRC_DIR.exists():
         print(f"Extracting SO-ARM 101 URDF → {OUT_DIR}")
         for src in SO_ARM_SRC_DIR.rglob("*"):
-            if src.is_file() and src.suffix in {".urdf", ".stl", ".part"}:
+            if src.is_file() and src.suffix in {".urdf", ".stl"}:
                 _copy_file(src, OUT_DIR / src.relative_to(REPO_ROOT))
     else:
         print(f"  [WARN] so_arm101/ not found — skipping robot URDF")
 
     print("Extraction complete.")
+
+
+def _hf_delete_folder_if_exists(api, path_in_repo: str) -> None:
+    """Delete a folder from the HF repo if it exists, silently skip if not."""
+    from huggingface_hub.utils import EntryNotFoundError
+    try:
+        api.delete_folder(
+            path_in_repo=path_in_repo,
+            repo_id=HF_ENV_REPO,
+            repo_type="model",
+            commit_message=f"Remove stale folder {path_in_repo}",
+        )
+        print(f"  deleted {path_in_repo} from HF")
+    except EntryNotFoundError:
+        pass
 
 
 def upload() -> None:
@@ -151,8 +164,8 @@ def upload() -> None:
 
     # Step 1: upload source code (text files, no binary assets).
     # assets/toy_sorting/ is in .gitignore so we explicitly exclude it here
-    # and handle it separately in step 2.
-    print("  [1/2] uploading source code …")
+    # and handle it separately in step 3.
+    print("  [1/3] uploading source code …")
     api.upload_folder(
         repo_id=HF_ENV_REPO,
         repo_type="model",
@@ -161,17 +174,18 @@ def upload() -> None:
         commit_message="Upload env source code",
     )
 
-    # Step 2: upload binary assets explicitly — bypasses .gitignore entirely
+    # Step 2: delete stale folders that exist on HF but are no longer used.
+    _hf_delete_folder_if_exists(api, "assets/toy_sorting/Kitchen_Other")
+    _hf_delete_folder_if_exists(api, "assets/toy_sorting/InteractiveAsset")
+
+    # Step 3: upload binary assets explicitly — bypasses .gitignore entirely
     # because we point folder_path directly at the assets directory.
-    # delete_patterns removes stale files from previous uploads that no longer
-    # exist locally (e.g. old Kitchen_Other/, InteractiveAsset/ folders).
-    print("  [2/2] uploading binary assets (USD, STL, PNG) …")
+    print("  [3/3] uploading binary assets (USD, STL, PNG) …")
     api.upload_folder(
         repo_id=HF_ENV_REPO,
         repo_type="model",
         folder_path=str(OUT_DIR),
         path_in_repo="assets/toy_sorting",
-        delete_patterns=["assets/toy_sorting/Kitchen_Other/**", "assets/toy_sorting/InteractiveAsset/**"],
         commit_message="Upload binary assets (USD, STL, PNG)",
     )
 
