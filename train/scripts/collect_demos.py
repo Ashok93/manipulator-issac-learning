@@ -228,15 +228,21 @@ def main() -> None:
     parser.add_argument("--sim-port", type=int, default=int(os.environ.get("SIM_PORT", "5555")))
     parser.add_argument("--ee-step-size", type=float, default=0.5)
     parser.add_argument("--gripper-speed", type=float, default=20.0)
+    parser.add_argument(
+        "--phone-os", choices=["ios", "android"], default="ios",
+        help="Phone platform: 'ios' (HEBI, local WiFi) or 'android' (WebXR URL)",
+    )
     args = parser.parse_args()
+
+    phone_os = PhoneOS.IOS if args.phone_os == "ios" else PhoneOS.ANDROID
 
     print(f"[collect_demos] Connecting to sim at {args.sim_host}:{args.sim_port} …")
     sim = SimClient(host=args.sim_host, port=args.sim_port)
 
-    print("[collect_demos] Starting WebXR teleop server (open the printed URL on your phone/Quest) …")
-    teleop = Phone(PhoneConfig(phone_os=PhoneOS.ANDROID))
+    print(f"[collect_demos] Starting phone teleop ({args.phone_os} mode) …")
+    teleop = Phone(PhoneConfig(phone_os=phone_os))
     teleop.connect()
-    print("[collect_demos] Phone/headset connected.")
+    print("[collect_demos] Phone connected.")
 
     kinematics = RobotKinematics(
         urdf_path=_URDF,
