@@ -1,4 +1,4 @@
-"""Minimal test scene — no external asset dependencies."""
+"""Minimal test scene — no external asset dependencies beyond the SO-ARM 101 URDF."""
 
 from __future__ import annotations
 
@@ -11,12 +11,20 @@ from isaaclab.utils import configclass
 
 from manipulator_learning.envs.so_arm101_cfg import make_so_arm101_cfg
 
-GROUND_Z = -1.05
+
+def _find_repo_root() -> Path:
+    """Walk up from this file until we find pyproject.toml (repo root sentinel)."""
+    for parent in Path(__file__).resolve().parents:
+        if (parent / "pyproject.toml").exists():
+            return parent
+    raise RuntimeError("Could not locate repo root (pyproject.toml not found)")
+
 
 _URDF = str(
-    Path(__file__).resolve().parents[3]
-    / "assets/toy_sorting/so_arm101/urdf/so_arm101.urdf"
+    _find_repo_root() / "assets" / "toy_sorting" / "so_arm101" / "urdf" / "so_arm101.urdf"
 )
+
+GROUND_Z = -1.05
 
 
 @configclass

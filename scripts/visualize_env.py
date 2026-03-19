@@ -12,13 +12,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import sys
-from pathlib import Path
-
-_REPO_ROOT = Path(__file__).resolve().parents[1]
-_SRC = _REPO_ROOT / "src"
-if str(_SRC) not in sys.path:
-    sys.path.insert(0, str(_SRC))
 
 # ---------------------------------------------------------------------------
 # 1. AppLauncher — before any isaaclab.* import
@@ -55,7 +48,6 @@ def main() -> None:
     print(f"[visualize_env] Observation keys: {list(obs.keys())}")
 
     print("[visualize_env] Running … (Ctrl+C or close window to stop)")
-    step = 0
     while simulation_app.is_running():
         action = torch.zeros(6)
         obs, reward, terminated, truncated, info = env.step(action)
@@ -64,7 +56,6 @@ def main() -> None:
             obs, _ = env.reset()
 
         sim.step()
-        step += 1
 
     env.close()
     print("[visualize_env] Done.")

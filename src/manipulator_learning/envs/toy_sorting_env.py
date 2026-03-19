@@ -25,9 +25,6 @@ class ToySortingEnvCfg:
 class ToySortingEnv:
     """Toy-sorting environment backed by Isaac Lab InteractiveScene."""
 
-    BOX_NAMES = ["box_0", "box_1", "box_2"]
-    TOY_NAMES = [f"toy_{i}" for i in range(9)]
-
     def __init__(self, cfg: ToySortingEnvCfg | None = None):
         self.cfg = cfg or ToySortingEnvCfg()
         self._toy_color_assignments: list[int] = []
@@ -64,41 +61,37 @@ class ToySortingEnv:
         The material is created once per prim_path and reused/updated on
         subsequent resets.
         """
-        try:
-            import omni.usd
-            from pxr import Gf, Sdf, Usd, UsdShade
-            stage = omni.usd.get_context().get_stage()
-            prim = stage.GetPrimAtPath(prim_path)
-            if not prim.IsValid():
-                print(f"[WARN] prim not found: {prim_path}")
-                return
+        import omni.usd
+        from pxr import Gf, Sdf, Usd, UsdShade
 
-            # Deterministic material path derived from the prim path
-            safe_name = prim_path.replace("/", "_").lstrip("_")
-            mat_path = f"/World/Looks/{safe_name}"
+        stage = omni.usd.get_context().get_stage()
+        prim = stage.GetPrimAtPath(prim_path)
+        if not prim.IsValid():
+            raise RuntimeError(f"Prim not found in stage: {prim_path}")
 
-            mat_prim = stage.GetPrimAtPath(mat_path)
-            if mat_prim.IsValid():
-                # Material already exists — just update the diffuse color
-                shader = UsdShade.Shader(stage.GetPrimAtPath(f"{mat_path}/Shader"))
-                shader.GetInput("diffuseColor").Set(Gf.Vec3f(*color_rgb))
-            else:
-                # First reset: create a new UsdPreviewSurface material
-                mat = UsdShade.Material.Define(stage, mat_path)
-                shader = UsdShade.Shader.Define(stage, f"{mat_path}/Shader")
-                shader.CreateIdAttr("UsdPreviewSurface")
-                shader.CreateInput("diffuseColor", Sdf.ValueTypeNames.Color3f).Set(Gf.Vec3f(*color_rgb))
-                shader.CreateInput("roughness", Sdf.ValueTypeNames.Float).Set(0.4)
-                mat.CreateSurfaceOutput().ConnectToSource(shader.ConnectableAPI(), "surface")
+        # Deterministic material path derived from the prim path
+        safe_name = prim_path.replace("/", "_").lstrip("_")
+        mat_path = f"/World/Looks/{safe_name}"
 
-            # Bind directly to every visual mesh (skipping collision meshes)
-            mat = UsdShade.Material(stage.GetPrimAtPath(mat_path))
-            for desc_prim in Usd.PrimRange(prim):
-                if desc_prim.GetTypeName() == "Mesh" and "Collisions" not in str(desc_prim.GetPath()):
-                    UsdShade.MaterialBindingAPI(desc_prim).Bind(mat)
+        mat_prim = stage.GetPrimAtPath(mat_path)
+        if mat_prim.IsValid():
+            # Material already exists — just update the diffuse color
+            shader = UsdShade.Shader(stage.GetPrimAtPath(f"{mat_path}/Shader"))
+            shader.GetInput("diffuseColor").Set(Gf.Vec3f(*color_rgb))
+        else:
+            # First reset: create a new UsdPreviewSurface material
+            mat = UsdShade.Material.Define(stage, mat_path)
+            shader = UsdShade.Shader.Define(stage, f"{mat_path}/Shader")
+            shader.CreateIdAttr("UsdPreviewSurface")
+            shader.CreateInput("diffuseColor", Sdf.ValueTypeNames.Color3f).Set(Gf.Vec3f(*color_rgb))
+            shader.CreateInput("roughness", Sdf.ValueTypeNames.Float).Set(0.4)
+            mat.CreateSurfaceOutput().ConnectToSource(shader.ConnectableAPI(), "surface")
 
-        except Exception as exc:
-            print(f"[WARN] _apply_color({prim_path}): {exc}")
+        # Bind directly to every visual mesh (skipping collision meshes)
+        mat = UsdShade.Material(stage.GetPrimAtPath(mat_path))
+        for desc_prim in Usd.PrimRange(prim):
+            if desc_prim.GetTypeName() == "Mesh" and "Collisions" not in str(desc_prim.GetPath()):
+                UsdShade.MaterialBindingAPI(desc_prim).Bind(mat)
 
     def _apply_colors(self) -> None:
         env_prefix = "/World/envs/env_0"
@@ -119,10 +112,11 @@ class ToySortingEnv:
         return self._get_observations(), {}
 
     def step(self, actions: torch.Tensor):
+        from isaaclab.sim import SimulationContext
         robot = self._scene["robot"]
         robot.set_joint_position_target(actions.unsqueeze(0))
         robot.write_data_to_sim()
-        self._scene.update(self._scene.cfg.sim.dt if hasattr(self._scene.cfg, "sim") else 0.01)
+        self._scene.update(SimulationContext.instance().get_physics_dt())
         return (
             self._get_observations(),
             torch.zeros(self.cfg.num_envs),
@@ -136,6 +130,6 @@ class ToySortingEnv:
 
     def _get_observations(self) -> dict:
         return {
-            "bowl_poses": torch.zeros(3, 7),
-            "toy_poses":  torch.zeros(self.cfg.num_toys, 7),
+            "box_poses": torch.zeros(3, 7),
+            "toy_poses": torch.zeros(self.cfg.num_toys, 7),
         }
