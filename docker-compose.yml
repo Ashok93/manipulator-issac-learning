@@ -28,7 +28,6 @@ services:
     volumes:
       - .:/workspace:rw
     network_mode: host
-    privileged: true
     depends_on:
       - sim
     stdin_open: true

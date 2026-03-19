@@ -1,18 +1,17 @@
-"""Collect toy-sorting demonstrations via iPhone teleoperation.
+"""Collect toy-sorting demonstrations via phone/headset teleoperation (WebXR).
 
 Connects to the sim server (ZMQ) running in the sim container, drives it
-with iPhone phone teleoperation, and records a LeRobotDataset.
+with phone teleoperation via WebXR, and records a LeRobotDataset.
 
 Architecture
 ------------
-  iPhone (HEBI Mobile I/O app)
+  Phone / Meta Quest (WebXR browser)
     → LeRobot Phone teleop → 6-DoF EE deltas
     → RobotKinematics IK (Placo, SO-ARM 101 URDF)
     → joint position targets
     → ZMQ → sim container → env.step()
     → ZMQ ← obs (image + state)
     → LeRobotDataset frame
-    → push to HuggingFace Hub
 
 Prerequisites
 -------------
@@ -24,15 +23,16 @@ Prerequisites
          --repo-id YOUR_HF_USER/toy-sorting-demos \\
          --num-episodes 20
 
-3. Install HEBI Mobile I/O app on iPhone (free, App Store).
+3. Open the printed HTTPS URL on your phone/Quest browser.
 4. Both devices on the same network (Tailscale works for remote servers).
 
-iPhone controls
----------------
-  B1 (hold)   — enable teleoperation (calibrates on first press)
-  A3 (analog) — gripper: push forward = close, pull back = open
+Controls (WebXR / Android mode)
+-------------------------------
+  Move (hold) — enable teleoperation (calibrates on first press)
+  A button    — open gripper
+  B button    — close gripper
 
-Calibration: hold phone screen-up, top edge toward the robot, press B1.
+Calibration: hold phone screen-up, top edge toward the robot, press Move.
 """
 
 from __future__ import annotations
@@ -156,7 +156,7 @@ def record_episode(
     frames = 0
     dt = 1.0 / fps
 
-    print("[collect_demos] Hold B1 on iPhone to enable motion. Press Ctrl+C to end episode early.")
+    print("[collect_demos] Hold 'Move' to enable motion. Press Ctrl+C to end episode early.")
 
     try:
         while True:
@@ -233,10 +233,10 @@ def main() -> None:
     print(f"[collect_demos] Connecting to sim at {args.sim_host}:{args.sim_port} …")
     sim = SimClient(host=args.sim_host, port=args.sim_port)
 
-    print("[collect_demos] Connecting to iPhone (HEBI Mobile I/O app) …")
-    teleop = Phone(PhoneConfig(phone_os=PhoneOS.IOS))
+    print("[collect_demos] Starting WebXR teleop server (open the printed URL on your phone/Quest) …")
+    teleop = Phone(PhoneConfig(phone_os=PhoneOS.ANDROID))
     teleop.connect()
-    print("[collect_demos] iPhone connected.")
+    print("[collect_demos] Phone/headset connected.")
 
     kinematics = RobotKinematics(
         urdf_path=_URDF,
