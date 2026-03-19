@@ -115,8 +115,9 @@ For headless servers (no display attached) just use `--headless` — no xhost ne
 ### HEBI Mobile I/O app
 
 1. Install [HEBI Mobile I/O](https://apps.apple.com/app/hebi-mobile-i-o/id1455735469) (free).
-2. Open the app → tap the **+** button → enter your VM's Tailscale IP (e.g. `100.x.y.z`).
-3. The app connects automatically when `collect_demos.py` starts (it starts its own HEBI server).
+2. Start `collect_demos.py` on the VM first — it starts the HEBI server.
+3. Open the app on your iPhone — it **auto-discovers** the server via mDNS, no IP entry needed.
+   Both devices just need to be on the same network (Tailscale handles this).
 
 ### Calibration
 
