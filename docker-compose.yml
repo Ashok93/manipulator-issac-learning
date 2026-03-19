@@ -16,3 +16,17 @@ services:
     shm_size: "4gb"
     stdin_open: true
     tty: true
+
+  lerobot:
+    build:
+      context: .
+      dockerfile: train/Dockerfile
+    environment:
+      SIM_HOST: sim
+      SIM_PORT: "5555"
+    volumes:
+      - .:/workspace:rw
+    depends_on:
+      - sim
+    stdin_open: true
+    tty: true
