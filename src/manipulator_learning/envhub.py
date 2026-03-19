@@ -6,6 +6,8 @@ It drives the native Isaac Lab ToySortingEnv directly — no LeIsaac required.
 
 from __future__ import annotations
 
+import gymnasium
+
 from manipulator_learning.envs.toy_sorting_env import ToySortingEnv, ToySortingEnvCfg
 
 TASK_ID = "ToySorting-v0"
@@ -15,17 +17,19 @@ def make_env(
     task: str = TASK_ID,
     n_envs: int = 1,
     **kwargs,
-):
-    """Create and return a ToySortingEnv.
+) -> gymnasium.vector.SyncVectorEnv:
+    """Create and return a ``gymnasium.vector.SyncVectorEnv`` wrapping a single
+    ``ToySortingEnv`` instance.
 
-    Returns ``{"toy_sorting": [env]}`` per the LeRobot EnvHub convention.
+    The Isaac Lab environment is not fork-safe, so we wrap the pre-created
+    instance rather than constructing it inside the worker lambda.
 
     Parameters
     ----------
     task:
         Task identifier. Must be ``"ToySorting-v0"``.
     n_envs:
-        Number of parallel environments.
+        Number of parallel environments (currently only 1 is supported).
     **kwargs:
         Additional fields forwarded to ``ToySortingEnvCfg``.
         Raises ``TypeError`` for unrecognised keys.
@@ -39,4 +43,5 @@ def make_env(
             raise TypeError(f"make_env() got unexpected keyword argument '{key}'")
         setattr(cfg, key, val)
 
-    return {"toy_sorting": [ToySortingEnv(cfg)]}
+    env = ToySortingEnv(cfg)
+    return gymnasium.vector.SyncVectorEnv([lambda: env])

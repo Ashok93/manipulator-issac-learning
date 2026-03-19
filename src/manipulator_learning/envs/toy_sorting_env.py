@@ -6,6 +6,8 @@ import random
 from dataclasses import dataclass
 from typing import Sequence
 
+import gymnasium as gym
+import numpy as np
 import torch
 
 
@@ -22,22 +24,59 @@ class ToySortingEnvCfg:
     num_toys: int = 9
 
 
-class ToySortingEnv:
-    """Toy-sorting environment backed by Isaac Lab InteractiveScene."""
+class ToySortingEnv(gym.Env):
+    """Toy-sorting environment backed by Isaac Lab InteractiveScene.
+
+    Observation space
+    -----------------
+    ``observation.state``
+        Joint positions of the SO-ARM 101, shape ``(6,)``, float32, range ``[-π, π]``.
+    ``observation.images.top``
+        Top-down RGB frame from the overhead camera, shape ``(480, 640, 3)``, uint8.
+
+    Action space
+    ------------
+    Joint position targets, shape ``(6,)``, float32, range ``[-π, π]``.
+    """
 
     def __init__(self, cfg: ToySortingEnvCfg | None = None):
+        super().__init__()
         self.cfg = cfg or ToySortingEnvCfg()
         self._toy_color_assignments: list[int] = []
+
+        self.observation_space = gym.spaces.Dict({
+            "observation.state": gym.spaces.Box(
+                low=-np.pi,
+                high=np.pi,
+                shape=(6,),
+                dtype=np.float32,
+            ),
+            "observation.images.top": gym.spaces.Box(
+                low=0,
+                high=255,
+                shape=(480, 640, 3),
+                dtype=np.uint8,
+            ),
+        })
+        self.action_space = gym.spaces.Box(
+            low=-np.pi,
+            high=np.pi,
+            shape=(6,),
+            dtype=np.float32,
+        )
+
         self._setup_scene()
 
     def _setup_scene(self) -> None:
         from isaaclab.scene import InteractiveScene
         from manipulator_learning.envs.toy_sorting_scene_cfg import ToySortingSceneCfg
+
         scene_cfg = ToySortingSceneCfg(
             num_envs=self.cfg.num_envs,
             env_spacing=self.cfg.env_spacing,
         )
         self._scene = InteractiveScene(scene_cfg)
+        self._camera = self._scene["camera"]
 
     # ------------------------------------------------------------------
     # Color helpers
@@ -102,26 +141,32 @@ class ToySortingEnv:
             self._apply_color(f"{env_prefix}/Toy_{i}", self.cfg.colors[self._toy_color_assignments[i]])
 
     # ------------------------------------------------------------------
-    # Gym-style interface
+    # Gym interface
     # ------------------------------------------------------------------
 
-    def reset(self, env_ids: Sequence[int] | None = None):
+    def reset(self, *, seed: int | None = None, options: dict | None = None):
+        super().reset(seed=seed)
         self._scene.reset()
         self._assign_colors()
         self._apply_colors()
         return self._get_observations(), {}
 
-    def step(self, actions: torch.Tensor):
+    def step(self, actions: np.ndarray | torch.Tensor):
         from isaaclab.sim import SimulationContext
+
+        if isinstance(actions, np.ndarray):
+            actions = torch.from_numpy(actions)
+
         robot = self._scene["robot"]
         robot.set_joint_position_target(actions.unsqueeze(0))
         robot.write_data_to_sim()
         self._scene.update(SimulationContext.instance().get_physics_dt())
+
         return (
             self._get_observations(),
-            torch.zeros(self.cfg.num_envs),
-            torch.zeros(self.cfg.num_envs, dtype=torch.bool),
-            torch.zeros(self.cfg.num_envs, dtype=torch.bool),
+            np.float32(0.0),
+            np.bool_(False),
+            np.bool_(False),
             {},
         )
 
@@ -129,7 +174,17 @@ class ToySortingEnv:
         pass
 
     def _get_observations(self) -> dict:
+        # Camera: output["rgb"] shape (num_envs, H, W, 4) RGBA torch tensor.
+        # Take env 0, convert to numpy, drop alpha channel, ensure uint8.
+        rgba_np = self._camera.data.output["rgb"][0].cpu().numpy()  # (H, W, 4)
+        if rgba_np.dtype != np.uint8:
+            rgba_np = (rgba_np * 255).clip(0, 255).astype(np.uint8)
+        rgb = rgba_np[:, :, :3]  # (480, 640, 3) uint8
+
+        # Robot joint positions: (num_envs, num_joints) → env 0, float32.
+        joint_pos = self._scene["robot"].data.joint_pos[0].cpu().numpy().astype(np.float32)
+
         return {
-            "box_poses": torch.zeros(3, 7),
-            "toy_poses": torch.zeros(self.cfg.num_toys, 7),
+            "observation.state": joint_pos,
+            "observation.images.top": rgb,
         }
