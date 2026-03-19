@@ -28,8 +28,7 @@ services:
     volumes:
       - .:/workspace:rw
     network_mode: host
-    security_opt:
-      - seccomp=unconfined
+    privileged: true
     depends_on:
       - sim
     stdin_open: true
