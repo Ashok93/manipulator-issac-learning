@@ -62,10 +62,16 @@ Open **two terminals** on the VM.
 
 **Terminal 1 — start the sim server:**
 
+`--extra sim` is required — it installs Isaac Lab + Isaac Sim into the venv on first run
+(~15 GB download from nvidia's PyPI, takes a while). The venv is saved to `.venv/` on
+the host via the bind mount and reused on all subsequent runs.
+
 ```bash
-docker compose run sim uv run python scripts/sim_server.py
-# Add --headless on a headless server (no display)
-docker compose run sim uv run python scripts/sim_server.py --headless
+# Headless (no GUI) — use this on vast.ai with no monitor attached
+docker compose run sim uv run --extra sim python scripts/sim_server.py --headless
+
+# With Isaac UI forwarded to your local machine — see X Forwarding section below
+docker compose run sim uv run --extra sim python scripts/sim_server.py
 ```
 
 The server downloads assets automatically on first run, then prints:
@@ -82,6 +88,19 @@ docker compose run lerobot uv run python scripts/collect_demos.py \
 ```
 
 The script connects to the sim server and waits for your iPhone.
+
+---
+
+## Isaac UI (with display)
+
+To run with the Isaac Sim GUI, allow Docker to use the host display first:
+
+```bash
+xhost +local:docker
+docker compose run sim uv run --extra sim python scripts/sim_server.py
+```
+
+For headless servers (no display attached) just use `--headless` — no xhost needed.
 
 ---
 
