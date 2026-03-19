@@ -50,6 +50,7 @@ from lerobot.teleoperators.phone import Phone
 from lerobot.teleoperators.phone.config_phone import PhoneConfig, PhoneOS
 from lerobot.model.kinematics import RobotKinematics
 from lerobot.datasets.lerobot_dataset import LeRobotDataset
+from lerobot.utils.rotation import Rotation
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -146,52 +147,113 @@ def record_episode(
     task: str,
     ee_step_size: float,
     gripper_speed: float,
+    phone_os: PhoneOS,
 ) -> int:
+    """Record one episode using the same logic as LeRobot's processor pipeline:
+    MapPhoneActionToRobotAction → EEReferenceAndDelta → GripperVelocityToJoint → IK
+    """
     obs = sim.reset()
 
-    ee_ref_pos: np.ndarray | None = None
-    ee_ref_quat: np.ndarray | None = None
-    current_joints = obs["observation.state"].copy()
+    # Sim uses radians, kinematics uses degrees
+    current_joints_deg = np.rad2deg(obs["observation.state"].astype(np.float64))
+
+    # --- EEReferenceAndDelta state ---
+    reference_ee_pose: np.ndarray | None = None  # latched on rising edge of B1
+    prev_enabled = False
+    command_when_disabled: np.ndarray | None = None
+
+    # --- IK state ---
+    q_curr_deg = current_joints_deg.copy()
 
     frames = 0
-    dt = 1.0 / fps
 
-    print("[collect_demos] Hold 'Move' to enable motion. Press Ctrl+C to end episode early.")
+    print("[collect_demos] Hold B1 to enable motion. Press Ctrl+C to end episode early.")
 
     try:
         while True:
+            # ----- Phone read -----
             phone_action = teleop.get_action()
-            enabled = bool(phone_action["enabled"])
+            if not phone_action:
+                time.sleep(0.01)
+                continue
+
+            # ----- Step 1: MapPhoneActionToRobotAction -----
+            enabled = bool(phone_action.get("phone.enabled", False))
+            pos = phone_action.get("phone.pos")
+            rot = phone_action.get("phone.rot")
+            raw_inputs = phone_action.get("phone.raw_inputs", {})
+
+            if pos is None or rot is None:
+                time.sleep(0.01)
+                continue
+
+            rotvec = rot.as_rotvec()
+
+            # Axis mapping (from LeRobot MapPhoneActionToRobotAction source)
+            target_x = -pos[1] if enabled else 0.0
+            target_y = pos[0] if enabled else 0.0
+            target_z = pos[2] if enabled else 0.0
+            target_wx = rotvec[1] if enabled else 0.0
+            target_wy = rotvec[0] if enabled else 0.0
+            target_wz = -rotvec[2] if enabled else 0.0
+
+            # Gripper velocity (iOS: A3 analog, Android: A-B buttons)
+            if phone_os == PhoneOS.IOS:
+                gripper_vel = float(raw_inputs.get("a3", 0.0))
+            else:
+                a = float(raw_inputs.get("reservedButtonA", 0.0))
+                b = float(raw_inputs.get("reservedButtonB", 0.0))
+                gripper_vel = a - b
+
+            # ----- Step 2: EEReferenceAndDelta -----
+            # Current EE pose from FK
+            t_curr = kinematics.forward_kinematics(current_joints_deg)
 
             if enabled:
-                if ee_ref_pos is None:
-                    ee_ref_pos, ee_ref_quat = kinematics.forward_kinematics(current_joints)
+                # Latch reference on rising edge
+                if not prev_enabled or reference_ee_pose is None:
+                    reference_ee_pose = t_curr.copy()
+                ref = reference_ee_pose
 
-                delta = np.array([
-                    phone_action["target_x"] * ee_step_size,
-                    phone_action["target_y"] * ee_step_size,
-                    phone_action["target_z"] * ee_step_size,
-                ], dtype=np.float32)
-                ee_ref_pos = ee_ref_pos + delta
+                delta_p = np.array([
+                    target_x * ee_step_size,
+                    target_y * ee_step_size,
+                    target_z * ee_step_size,
+                ], dtype=float)
+                r_abs = Rotation.from_rotvec([target_wx, target_wy, target_wz]).as_matrix()
 
-                gripper_vel = float(phone_action.get("gripper_vel", 0.0))
-                current_joints[-1] = float(
-                    np.clip(current_joints[-1] + gripper_vel * dt / gripper_speed, 0.0, 1.0)
-                )
+                desired = np.eye(4, dtype=float)
+                desired[:3, :3] = ref[:3, :3] @ r_abs
+                desired[:3, 3] = ref[:3, 3] + delta_p
 
-                joint_targets = kinematics.inverse_kinematics(
-                    target_position=ee_ref_pos,
-                    target_orientation=ee_ref_quat,
-                    initial_joints=current_joints,
-                )
+                command_when_disabled = desired.copy()
             else:
-                ee_ref_pos = None
-                ee_ref_quat = None
-                joint_targets = current_joints
+                if command_when_disabled is None:
+                    command_when_disabled = t_curr.copy()
+                desired = command_when_disabled.copy()
 
-            action = np.array(joint_targets, dtype=np.float32)
-            obs, _reward, terminated, truncated, = sim.step(action)
-            current_joints = obs["observation.state"].copy()
+            prev_enabled = enabled
+
+            # ----- Step 3: GripperVelocityToJoint -----
+            gripper_delta = gripper_vel * gripper_speed
+            gripper_pos = float(np.clip(current_joints_deg[-1] + gripper_delta, 0.0, 100.0))
+
+            # ----- Step 4: InverseKinematicsEEToJoints -----
+            q_curr_deg = current_joints_deg.copy()  # closed-loop: use measured joints
+            joint_targets_deg = kinematics.inverse_kinematics(q_curr_deg, desired)
+
+            # Replace gripper with velocity-integrated value
+            joint_targets_deg[-1] = gripper_pos
+
+            # Convert to radians for sim
+            action = np.deg2rad(joint_targets_deg).astype(np.float32)
+
+            if frames % 30 == 0:
+                print(f"[debug] frame={frames} enabled={enabled} "
+                      f"ee_target={desired[:3, 3]} joints_deg={joint_targets_deg}")
+
+            obs, _reward, terminated, truncated = sim.step(action)
+            current_joints_deg = np.rad2deg(obs["observation.state"].astype(np.float64))
 
             dataset.add_frame({
                 "observation.state": obs["observation.state"],
@@ -266,6 +328,7 @@ def main() -> None:
             task=args.task,
             ee_step_size=args.ee_step_size,
             gripper_speed=args.gripper_speed,
+            phone_os=phone_os,
         )
         total_frames += frames
 
