@@ -38,6 +38,7 @@ Calibration: hold phone screen-up, top edge toward the robot, press B1.
 from __future__ import annotations
 
 import argparse
+import os
 import time
 from pathlib import Path
 
@@ -223,8 +224,8 @@ def main() -> None:
     parser.add_argument("--num-episodes", type=int, default=20)
     parser.add_argument("--fps", type=int, default=30)
     parser.add_argument("--task", default="Sort toys by color into the matching coloured box.")
-    parser.add_argument("--sim-host", default="sim", help="Sim container hostname (default: sim)")
-    parser.add_argument("--sim-port", type=int, default=5555)
+    parser.add_argument("--sim-host", default=os.environ.get("SIM_HOST", "localhost"))
+    parser.add_argument("--sim-port", type=int, default=int(os.environ.get("SIM_PORT", "5555")))
     parser.add_argument("--ee-step-size", type=float, default=0.5)
     parser.add_argument("--gripper-speed", type=float, default=20.0)
     args = parser.parse_args()
