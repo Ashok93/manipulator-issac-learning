@@ -38,7 +38,7 @@ args_cli = parser.parse_args()
 
 from isaaclab.app import AppLauncher  # noqa: E402
 
-app_launcher = AppLauncher(headless=args_cli.headless)
+app_launcher = AppLauncher(headless=args_cli.headless, enable_cameras=True)
 simulation_app = app_launcher.app
 
 # ---------------------------------------------------------------------------
