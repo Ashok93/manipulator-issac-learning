@@ -13,6 +13,7 @@ services:
       - .:/workspace:rw
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
     runtime: nvidia
+    network_mode: host
     shm_size: "4gb"
     stdin_open: true
     tty: true
@@ -22,10 +23,13 @@ services:
       context: train
       dockerfile: Dockerfile
     environment:
-      SIM_HOST: sim
+      SIM_HOST: localhost
       SIM_PORT: "5555"
     volumes:
       - .:/workspace:rw
+    network_mode: host
+    security_opt:
+      - seccomp=unconfined
     depends_on:
       - sim
     stdin_open: true
