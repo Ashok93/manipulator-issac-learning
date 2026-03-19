@@ -263,8 +263,9 @@ def main() -> None:
         total_frames += frames
 
     print(f"\n[collect_demos] {args.num_episodes} episodes, {total_frames} total frames.")
-    print(f"[collect_demos] Pushing to HuggingFace Hub: {args.repo_id} …")
-    dataset.push_to_hub()
+    print(f"[collect_demos] Dataset saved locally. To push to HuggingFace Hub run:")
+    print(f"[collect_demos]   dataset.push_to_hub()  # repo: {args.repo_id}")
+    # dataset.push_to_hub()  # uncomment when ready to publish
     print("[collect_demos] Done.")
 
     teleop.disconnect()
