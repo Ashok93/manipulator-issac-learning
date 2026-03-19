@@ -15,7 +15,18 @@ or the simulation window is closed.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 from pathlib import Path
+
+# ---------------------------------------------------------------------------
+# Auto-download assets before anything Isaac-Lab-related is imported.
+# ensure_assets() is a no-op if assets/toy_sorting/ is already populated.
+# ---------------------------------------------------------------------------
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+_spec = importlib.util.spec_from_file_location("download", _REPO_ROOT / "assets" / "download.py")
+_download = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_download)
+_download.ensure_assets()
 
 # ---------------------------------------------------------------------------
 # AppLauncher must be created before any other isaaclab.* import
