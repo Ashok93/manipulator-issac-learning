@@ -82,7 +82,7 @@ The server downloads assets automatically on first run, then prints:
 **Terminal 2 — start demo collection:**
 
 ```bash
-docker compose run lerobot uv run python scripts/collect_demos.py \
+docker compose run lerobot python scripts/collect_demos.py \
     --repo-id AshDash93/toy-sorting-demos \
     --num-episodes 20
 ```
@@ -158,7 +158,7 @@ To push to HuggingFace Hub when ready, uncomment `dataset.push_to_hub()` in
 
 ```bash
 echo "HF_TOKEN=hf_..." >> .env
-docker compose run lerobot uv run python scripts/collect_demos.py \
+docker compose run lerobot python scripts/collect_demos.py \
     --repo-id AshDash93/toy-sorting-demos \
     --num-episodes 20
 ```

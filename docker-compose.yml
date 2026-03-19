@@ -19,8 +19,8 @@ services:
 
   lerobot:
     build:
-      context: .
-      dockerfile: train/Dockerfile
+      context: train
+      dockerfile: Dockerfile
     environment:
       SIM_HOST: sim
       SIM_PORT: "5555"
