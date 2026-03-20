@@ -183,9 +183,11 @@ class ToySortingEnv(gym.Env):
         def _place_object(name: str, x: float, y: float) -> None:
             obj = self._scene[name]
             root_state = obj.data.default_root_state.clone()
-            root_state[:, 0] = x
-            root_state[:, 1] = y
-            root_state[:, 2] = 0.0  # table surface
+            # Position relative to env origin + table surface
+            root_state[:, :3] = self._scene.env_origins
+            root_state[:, 0] += x
+            root_state[:, 1] += y
+            # z stays at env_origin z (table surface = 0)
             # Keep default orientation (root_state[:, 3:7] already has it)
             # Zero all velocities (root_state[:, 7:] = lin_vel + ang_vel)
             root_state[:, 7:] = 0.0
@@ -210,10 +212,11 @@ class ToySortingEnv(gym.Env):
 
     def reset(self, *, seed: int | None = None, options: dict | None = None):
         super().reset(seed=seed)
-        self._assign_colors()
-        # Write randomized poses with zero velocity, then reset() clears buffers
-        self._randomize_positions()
+        # 1. Reset scene to defaults (writes init_state to sim)
         self._scene.reset()
+        # 2. Randomize on top — write_root_pose_to_sim overwrites defaults
+        self._assign_colors()
+        self._randomize_positions()
         self._apply_colors()
         return self._get_observations(), {}
 
