@@ -1,38 +1,42 @@
-"""Collect toy-sorting demonstrations via phone/headset teleoperation (WebXR).
+"""Collect toy-sorting demonstrations via iPhone teleoperation (HEBI).
 
-Connects to the sim server (ZMQ) running in the sim container, drives it
-with phone teleoperation via WebXR, and records a LeRobotDataset.
+Connects to the sim server (ZMQ) running on a remote GPU server, drives it
+with phone teleoperation via HEBI Mobile I/O, and records a LeRobotDataset.
 
 Architecture
 ------------
-  Phone / Meta Quest (WebXR browser)
+  iPhone (HEBI Mobile I/O, local WiFi)
     → LeRobot Phone teleop → 6-DoF EE deltas
-    → RobotKinematics IK (Placo, SO-ARM 101 URDF)
+    → Processor pipeline (matching LeRobot exactly):
+        MapPhoneActionToRobotAction → EEReferenceAndDelta
+        → EEBoundsAndSafety → GripperVelocityToJoint
+        → InverseKinematicsEEToJoints
     → joint position targets
-    → ZMQ → sim container → env.step()
+    → ZMQ → sim server → env.step()
     → ZMQ ← obs (image + state)
     → LeRobotDataset frame
 
 Prerequisites
 -------------
-1. Start the sim container first:
-     docker compose run sim uv run python scripts/sim_server.py
+1. Start the sim server on the remote GPU server:
+     docker compose run sim uv run --extra sim python scripts/sim_server.py
 
-2. Then in a second terminal, start this container:
-     docker compose run lerobot uv run python scripts/collect_demos.py \\
-         --repo-id YOUR_HF_USER/toy-sorting-demos \\
-         --num-episodes 20
+2. On your local Mac:
+     cd train
+     SIM_HOST=<tailscale-ip> uv run python scripts/collect_demos.py \\
+         --repo-id AshDash93/toy-sorting-demos --num-episodes 20
 
-3. Open the printed HTTPS URL on your phone/Quest browser.
-4. Both devices on the same network (Tailscale works for remote servers).
+3. Open HEBI Mobile I/O on your iPhone (same WiFi as Mac).
 
-Controls (WebXR / Android mode)
--------------------------------
-  Move (hold) — enable teleoperation (calibrates on first press)
-  A button    — open gripper
-  B button    — close gripper
+Controls (iOS / HEBI)
+---------------------
+  B1 (hold)         — enable teleoperation (calibrates on first press)
+  B1 (release)      — freeze robot in place
+  A3 (push forward) — close gripper
+  A3 (pull back)    — open gripper
+  B8 (tap)          — end current episode and save
 
-Calibration: hold phone screen-up, top edge toward the robot, press Move.
+Calibration: hold phone screen-up, top edge toward the robot, press B1.
 """
 
 from __future__ import annotations
@@ -63,19 +67,19 @@ _JOINT_NAMES = ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wr
 
 
 # ---------------------------------------------------------------------------
-# ZMQ client helpers
+# ZMQ client
 # ---------------------------------------------------------------------------
 
 def _decode_obs(encoded: dict) -> dict:
     obs = {}
     for k, v in encoded.items():
         arr = np.frombuffer(v["data"], dtype=v["dtype"]).reshape(v["shape"])
-        obs[k] = arr.copy()  # frombuffer returns read-only view
+        obs[k] = arr.copy()
     return obs
 
 
 class SimClient:
-    """ZMQ REQ client for the sim container."""
+    """ZMQ REQ client for the sim server."""
 
     def __init__(self, host: str, port: int):
         self._ctx = zmq.Context()
@@ -136,7 +140,13 @@ def build_dataset(repo_id: str, fps: int) -> LeRobotDataset:
 
 
 # ---------------------------------------------------------------------------
-# Episode recording
+# Episode recording — follows LeRobot processor pipeline exactly:
+#   MapPhoneActionToRobotAction → EEReferenceAndDelta
+#   → EEBoundsAndSafety → GripperVelocityToJoint
+#   → InverseKinematicsEEToJoints
+#
+# Source: lerobot/teleoperators/phone/phone_processor.py
+#         lerobot/robots/so_follower/robot_kinematic_processor.py
 # ---------------------------------------------------------------------------
 
 def record_episode(
@@ -144,131 +154,159 @@ def record_episode(
     teleop: Phone,
     kinematics: RobotKinematics,
     dataset: LeRobotDataset,
-    fps: int,
     task: str,
-    ee_step_size: float,
+    ee_step_sizes: dict[str, float],
     gripper_speed: float,
+    max_ee_step_m: float,
+    ee_bounds: dict[str, list[float]],
     phone_os: PhoneOS,
 ) -> int:
-    """Record one episode using the same logic as LeRobot's processor pipeline:
-    MapPhoneActionToRobotAction → EEReferenceAndDelta → GripperVelocityToJoint → IK
-    """
+    """Record one episode.  Returns frame count."""
+    print("[collect_demos] Resetting sim …")
     obs = sim.reset()
 
-    # Sim uses radians, kinematics uses degrees
+    # Sim uses radians, kinematics uses degrees (LeRobot SO-101 convention)
     current_joints_deg = np.rad2deg(obs["observation.state"].astype(np.float64))
 
-    # --- EEReferenceAndDelta state ---
-    reference_ee_pose: np.ndarray | None = None  # latched on rising edge of B1
+    # --- EEReferenceAndDelta state (matches lerobot source) ---
+    reference_ee_pose: np.ndarray | None = None
     prev_enabled = False
     command_when_disabled: np.ndarray | None = None
 
-    # --- IK state ---
-    q_curr_deg = current_joints_deg.copy()
+    # --- EEBoundsAndSafety state ---
+    last_ee_pos: np.ndarray | None = None
 
     frames = 0
 
-    print("[collect_demos] Hold B1 to enable motion. Press Ctrl+C to end episode early.")
+    print("[collect_demos] Hold B1 to control robot. Tap B8 to end episode.")
 
-    try:
-        while True:
-            # ----- Phone read -----
-            phone_action = teleop.get_action()
-            if not phone_action:
-                time.sleep(0.01)
-                continue
+    while True:
+        # ----- Phone read -----
+        phone_action = teleop.get_action()
+        if not phone_action:
+            time.sleep(0.01)
+            continue
 
-            # ----- Step 1: MapPhoneActionToRobotAction -----
-            enabled = bool(phone_action.get("phone.enabled", False))
-            pos = phone_action.get("phone.pos")
-            rot = phone_action.get("phone.rot")
-            raw_inputs = phone_action.get("phone.raw_inputs", {})
+        enabled = bool(phone_action.get("phone.enabled", False))
+        pos = phone_action.get("phone.pos")
+        rot = phone_action.get("phone.rot")
+        raw_inputs = phone_action.get("phone.raw_inputs", {})
 
-            if pos is None or rot is None:
-                time.sleep(0.01)
-                continue
+        if pos is None or rot is None:
+            time.sleep(0.01)
+            continue
 
-            rotvec = rot.as_rotvec()
+        # Check B8 to end episode
+        if int(raw_inputs.get("b8", 0)):
+            print("[collect_demos] B8 pressed — ending episode.")
+            break
 
-            # Axis mapping (from LeRobot MapPhoneActionToRobotAction source)
-            target_x = -pos[1] if enabled else 0.0
-            target_y = pos[0] if enabled else 0.0
-            target_z = pos[2] if enabled else 0.0
-            target_wx = rotvec[1] if enabled else 0.0
-            target_wy = rotvec[0] if enabled else 0.0
-            target_wz = -rotvec[2] if enabled else 0.0
+        # =====================================================================
+        # Step 1: MapPhoneActionToRobotAction
+        # (lerobot/teleoperators/phone/phone_processor.py)
+        # =====================================================================
+        rotvec = rot.as_rotvec()
 
-            # Gripper velocity (iOS: A3 analog, Android: A-B buttons)
-            if phone_os == PhoneOS.IOS:
-                gripper_vel = float(raw_inputs.get("a3", 0.0))
-            else:
-                a = float(raw_inputs.get("reservedButtonA", 0.0))
-                b = float(raw_inputs.get("reservedButtonB", 0.0))
-                gripper_vel = a - b
+        target_x = -pos[1] if enabled else 0.0
+        target_y = pos[0] if enabled else 0.0
+        target_z = pos[2] if enabled else 0.0
+        target_wx = rotvec[1] if enabled else 0.0
+        target_wy = rotvec[0] if enabled else 0.0
+        target_wz = -rotvec[2] if enabled else 0.0
 
-            # ----- Step 2: EEReferenceAndDelta -----
-            # Current EE pose from FK
-            t_curr = kinematics.forward_kinematics(current_joints_deg)
+        if phone_os == PhoneOS.IOS:
+            gripper_vel = float(raw_inputs.get("a3", 0.0))
+        else:
+            a = float(raw_inputs.get("reservedButtonA", 0.0))
+            b = float(raw_inputs.get("reservedButtonB", 0.0))
+            gripper_vel = a - b
 
-            if enabled:
-                # Latch reference on rising edge
-                if not prev_enabled or reference_ee_pose is None:
-                    reference_ee_pose = t_curr.copy()
-                ref = reference_ee_pose
+        # =====================================================================
+        # Step 2: EEReferenceAndDelta
+        # (lerobot/robots/so_follower/robot_kinematic_processor.py)
+        # =====================================================================
+        t_curr = kinematics.forward_kinematics(current_joints_deg)
 
-                delta_p = np.array([
-                    target_x * ee_step_size,
-                    target_y * ee_step_size,
-                    target_z * ee_step_size,
-                ], dtype=float)
-                r_abs = Rotation.from_rotvec([target_wx, target_wy, target_wz]).as_matrix()
+        if enabled:
+            ref = t_curr
+            # Latched reference: capture on rising edge
+            if not prev_enabled or reference_ee_pose is None:
+                reference_ee_pose = t_curr.copy()
+            ref = reference_ee_pose
 
-                desired = np.eye(4, dtype=float)
-                desired[:3, :3] = ref[:3, :3] @ r_abs
-                desired[:3, 3] = ref[:3, 3] + delta_p
+            delta_p = np.array([
+                target_x * ee_step_sizes["x"],
+                target_y * ee_step_sizes["y"],
+                target_z * ee_step_sizes["z"],
+            ], dtype=float)
+            r_abs = Rotation.from_rotvec([target_wx, target_wy, target_wz]).as_matrix()
 
-                command_when_disabled = desired.copy()
-            else:
-                if command_when_disabled is None:
-                    command_when_disabled = t_curr.copy()
-                desired = command_when_disabled.copy()
+            desired = np.eye(4, dtype=float)
+            desired[:3, :3] = ref[:3, :3] @ r_abs
+            desired[:3, 3] = ref[:3, 3] + delta_p
 
-            prev_enabled = enabled
+            command_when_disabled = desired.copy()
+        else:
+            if command_when_disabled is None:
+                command_when_disabled = t_curr.copy()
+            desired = command_when_disabled.copy()
 
-            # ----- Step 3: GripperVelocityToJoint -----
-            gripper_delta = gripper_vel * gripper_speed
-            gripper_pos = float(np.clip(current_joints_deg[-1] + gripper_delta, 0.0, 100.0))
+        prev_enabled = enabled
 
-            # ----- Step 4: InverseKinematicsEEToJoints -----
-            q_curr_deg = current_joints_deg.copy()  # closed-loop: use measured joints
-            joint_targets_deg = kinematics.inverse_kinematics(q_curr_deg, desired)
+        # =====================================================================
+        # Step 3: EEBoundsAndSafety
+        # (lerobot/robots/so_follower/robot_kinematic_processor.py)
+        # Clip EE position to workspace bounds, rate-limit large jumps.
+        # =====================================================================
+        ee_pos = desired[:3, 3].copy()
 
-            # Replace gripper with velocity-integrated value
-            joint_targets_deg[-1] = gripper_pos
+        # Clip to workspace bounds
+        ee_pos = np.clip(ee_pos, ee_bounds["min"], ee_bounds["max"])
 
-            # Convert to radians for sim
-            action = np.deg2rad(joint_targets_deg).astype(np.float32)
+        # Rate-limit: clamp step size to max_ee_step_m
+        if last_ee_pos is not None:
+            dpos = ee_pos - last_ee_pos
+            step_norm = float(np.linalg.norm(dpos))
+            if step_norm > max_ee_step_m and step_norm > 0:
+                ee_pos = last_ee_pos + dpos * (max_ee_step_m / step_norm)
 
-            if frames % 30 == 0:
-                print(f"[debug] frame={frames} enabled={enabled} "
-                      f"ee_target={desired[:3, 3]} joints_deg={joint_targets_deg}")
+        last_ee_pos = ee_pos.copy()
+        desired[:3, 3] = ee_pos
 
-            obs, _reward, terminated, truncated = sim.step(action)
-            current_joints_deg = np.rad2deg(obs["observation.state"].astype(np.float64))
+        # =====================================================================
+        # Step 4: GripperVelocityToJoint
+        # (lerobot/robots/so_follower/robot_kinematic_processor.py)
+        # =====================================================================
+        gripper_delta = gripper_vel * gripper_speed
+        gripper_pos = float(np.clip(current_joints_deg[-1] + gripper_delta, 0.0, 100.0))
 
-            dataset.add_frame({
-                "observation.state": obs["observation.state"],
-                "observation.images.top": obs["observation.images.top"],
-                "action": action,
-                "task": task,
-            })
-            frames += 1
+        # =====================================================================
+        # Step 5: InverseKinematicsEEToJoints (closed-loop)
+        # (lerobot/robots/so_follower/robot_kinematic_processor.py)
+        # =====================================================================
+        q_curr_deg = current_joints_deg.copy()  # closed-loop: measured joints as IK guess
+        joint_targets_deg = kinematics.inverse_kinematics(q_curr_deg, desired)
+        joint_targets_deg[-1] = gripper_pos  # replace gripper with velocity-integrated value
 
-            if terminated or truncated:
-                break
+        # Convert to radians for sim
+        action = np.deg2rad(joint_targets_deg).astype(np.float32)
 
-    except KeyboardInterrupt:
-        print("\n[collect_demos] Episode ended early by user.")
+        if frames % 30 == 0:
+            print(f"  frame={frames} enabled={enabled} ee={ee_pos}")
+
+        obs, _reward, terminated, truncated = sim.step(action)
+        current_joints_deg = np.rad2deg(obs["observation.state"].astype(np.float64))
+
+        dataset.add_frame({
+            "observation.state": obs["observation.state"],
+            "observation.images.top": obs["observation.images.top"],
+            "action": action,
+            "task": task,
+        })
+        frames += 1
+
+        if terminated or truncated:
+            break
 
     dataset.save_episode(task=task)
     print(f"[collect_demos] Episode saved — {frames} frames.")
@@ -289,15 +327,27 @@ def main() -> None:
     parser.add_argument("--task", default="Sort toys by color into the matching coloured box.")
     parser.add_argument("--sim-host", default=os.environ.get("SIM_HOST", "localhost"))
     parser.add_argument("--sim-port", type=int, default=int(os.environ.get("SIM_PORT", "5555")))
-    parser.add_argument("--ee-step-size", type=float, default=0.5)
-    parser.add_argument("--gripper-speed", type=float, default=20.0)
+    parser.add_argument("--gripper-speed", type=float, default=20.0,
+                        help="GripperVelocityToJoint speed_factor (default: 20.0)")
+    parser.add_argument("--max-ee-step", type=float, default=0.05,
+                        help="EEBoundsAndSafety max step in meters (default: 0.05)")
     parser.add_argument(
         "--phone-os", choices=["ios", "android"], default="ios",
-        help="Phone platform: 'ios' (HEBI, local WiFi) or 'android' (WebXR URL)",
+        help="Phone platform: 'ios' (HEBI) or 'android' (WebXR)",
     )
     args = parser.parse_args()
 
     phone_os = PhoneOS.IOS if args.phone_os == "ios" else PhoneOS.ANDROID
+
+    # EEReferenceAndDelta step sizes (same as LeRobot default)
+    ee_step_sizes = {"x": 0.5, "y": 0.5, "z": 0.5}
+
+    # EEBoundsAndSafety workspace bounds (in robot local frame, meters)
+    # SO-ARM 101 reach ~25cm, generous bounds to avoid clipping valid motions
+    ee_bounds = {
+        "min": [-0.30, -0.30, -0.05],
+        "max": [0.30, 0.30, 0.35],
+    }
 
     print(f"[collect_demos] Connecting to sim at {args.sim_host}:{args.sim_port} …")
     sim = SimClient(host=args.sim_host, port=args.sim_port)
@@ -325,10 +375,11 @@ def main() -> None:
             teleop=teleop,
             kinematics=kinematics,
             dataset=dataset,
-            fps=args.fps,
             task=args.task,
-            ee_step_size=args.ee_step_size,
+            ee_step_sizes=ee_step_sizes,
             gripper_speed=args.gripper_speed,
+            max_ee_step_m=args.max_ee_step,
+            ee_bounds=ee_bounds,
             phone_os=phone_os,
         )
         total_frames += frames
@@ -336,7 +387,6 @@ def main() -> None:
     print(f"\n[collect_demos] {args.num_episodes} episodes, {total_frames} total frames.")
     print(f"[collect_demos] Dataset saved locally. To push to HuggingFace Hub run:")
     print(f"[collect_demos]   dataset.push_to_hub()  # repo: {args.repo_id}")
-    # dataset.push_to_hub()  # uncomment when ready to publish
     print("[collect_demos] Done.")
 
     teleop.disconnect()
