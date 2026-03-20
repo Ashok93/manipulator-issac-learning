@@ -5,7 +5,6 @@ from __future__ import annotations
 import math
 import random
 from dataclasses import dataclass
-from typing import Sequence
 
 import gymnasium as gym
 import numpy as np
@@ -162,13 +161,12 @@ class ToySortingEnv(gym.Env):
         return x, y
 
     def _randomize_positions(self) -> None:
-        """Randomize toy and box positions within the robot's reachable arc."""
-        import omni.usd
-        from pxr import Gf, UsdGeom
+        """Randomize toy and box positions using the physics API.
 
-        stage = omni.usd.get_context().get_stage()
-        env_prefix = "/World/envs/env_0"
-
+        Uses write_root_pose_to_sim() + write_root_velocity_to_sim() to teleport
+        objects to random positions on the table surface (z=0) with zero velocity.
+        Objects are placed, not dropped.
+        """
         placed: list[tuple[float, float, float]] = []  # (x, y, radius)
 
         def _try_place(min_r: float, max_r: float, obj_radius: float) -> tuple[float, float] | None:
@@ -182,28 +180,29 @@ class ToySortingEnv(gym.Env):
                     return x, y
             return None
 
-        def _set_translate(prim_path: str, pos: tuple[float, float, float]) -> None:
-            prim = stage.GetPrimAtPath(prim_path)
-            if not prim.IsValid():
-                return
-            xformable = UsdGeom.Xformable(prim)
-            for op in xformable.GetOrderedXformOps():
-                if op.GetOpType() == UsdGeom.XformOp.TypeTranslate:
-                    op.Set(Gf.Vec3d(*pos))
-                    return
-            xformable.AddTranslateOp().Set(Gf.Vec3d(*pos))
+        def _place_object(name: str, x: float, y: float) -> None:
+            obj = self._scene[name]
+            root_state = obj.data.default_root_state.clone()
+            root_state[:, 0] = x
+            root_state[:, 1] = y
+            root_state[:, 2] = 0.0  # table surface
+            # Keep default orientation (root_state[:, 3:7] already has it)
+            # Zero all velocities (root_state[:, 7:] = lin_vel + ang_vel)
+            root_state[:, 7:] = 0.0
+            obj.write_root_pose_to_sim(root_state[:, :7])
+            obj.write_root_velocity_to_sim(root_state[:, 7:])
 
         # Place boxes first (larger objects, at far reach)
         for i in range(3):
             xy = _try_place(0.16, self._MAX_REACH, self._BOX_RADIUS)
             if xy:
-                _set_translate(f"{env_prefix}/Box_{i}", (xy[0], xy[1], 0.0))
+                _place_object(f"box_{i}", xy[0], xy[1])
 
         # Place toys (smaller, closer to robot)
         for i in range(self.cfg.num_toys):
             xy = _try_place(0.08, 0.18, self._TOY_RADIUS)
             if xy:
-                _set_translate(f"{env_prefix}/Toy_{i}", (xy[0], xy[1], 0.0))
+                _place_object(f"toy_{i}", xy[0], xy[1])
 
     # ------------------------------------------------------------------
     # Gym interface
@@ -211,9 +210,10 @@ class ToySortingEnv(gym.Env):
 
     def reset(self, *, seed: int | None = None, options: dict | None = None):
         super().reset(seed=seed)
-        self._scene.reset()
         self._assign_colors()
+        # Write randomized poses with zero velocity, then reset() clears buffers
         self._randomize_positions()
+        self._scene.reset()
         self._apply_colors()
         return self._get_observations(), {}
 
@@ -225,8 +225,11 @@ class ToySortingEnv(gym.Env):
 
         robot = self._scene["robot"]
         robot.set_joint_position_target(actions.unsqueeze(0))
-        robot.write_data_to_sim()
-        self._scene.update(SimulationContext.instance().get_physics_dt())
+        # Write all scene data (robot + rigid objects) then step physics
+        self._scene.write_data_to_sim()
+        sim = SimulationContext.instance()
+        sim.step()
+        self._scene.update(sim.get_physics_dt())
 
         return (
             self._get_observations(),

@@ -19,10 +19,13 @@ from __future__ import annotations
 from pathlib import Path
 
 import isaaclab.sim as sim_utils
-from isaaclab.assets import ArticulationCfg, AssetBaseCfg
+from isaaclab.assets import ArticulationCfg, AssetBaseCfg, RigidObjectCfg
 from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.sensors import CameraCfg
 from isaaclab.utils import configclass
+
+NUM_BOXES = 3
+NUM_TOYS = 9
 
 from manipulator_learning.envs.so_arm101_cfg import make_so_arm101_cfg
 
@@ -138,31 +141,33 @@ class ToySortingSceneCfg(InteractiveSceneCfg):
     )
 
     # Sorting containers: Kit1_Box (15×15×5 cm open-top box), base at z=0.
+    # Physics (rigid body, mass=155g, collision) baked into the USD.
     # Colors (red / green / blue) applied at reset via ToySortingEnv._apply_colors().
-    box_0 = AssetBaseCfg(
+    box_0: RigidObjectCfg = RigidObjectCfg(
         prim_path="{ENV_REGEX_NS}/Box_0",
-        spawn=sim_utils.UsdFileCfg(usd_path=_BOX_USD, scale=(1.0, 1.0, 1.0)),
-        init_state=AssetBaseCfg.InitialStateCfg(pos=_BOX_POSITIONS[0]),
+        spawn=sim_utils.UsdFileCfg(usd_path=_BOX_USD),
+        init_state=RigidObjectCfg.InitialStateCfg(pos=_BOX_POSITIONS[0]),
     )
-    box_1 = AssetBaseCfg(
+    box_1: RigidObjectCfg = RigidObjectCfg(
         prim_path="{ENV_REGEX_NS}/Box_1",
-        spawn=sim_utils.UsdFileCfg(usd_path=_BOX_USD, scale=(1.0, 1.0, 1.0)),
-        init_state=AssetBaseCfg.InitialStateCfg(pos=_BOX_POSITIONS[1]),
+        spawn=sim_utils.UsdFileCfg(usd_path=_BOX_USD),
+        init_state=RigidObjectCfg.InitialStateCfg(pos=_BOX_POSITIONS[1]),
     )
-    box_2 = AssetBaseCfg(
+    box_2: RigidObjectCfg = RigidObjectCfg(
         prim_path="{ENV_REGEX_NS}/Box_2",
-        spawn=sim_utils.UsdFileCfg(usd_path=_BOX_USD, scale=(1.0, 1.0, 1.0)),
-        init_state=AssetBaseCfg.InitialStateCfg(pos=_BOX_POSITIONS[2]),
+        spawn=sim_utils.UsdFileCfg(usd_path=_BOX_USD),
+        init_state=RigidObjectCfg.InitialStateCfg(pos=_BOX_POSITIONS[2]),
     )
 
     # Toy shapes: each slot uses a distinct Kit1 shape.
+    # Physics (rigid body, mass ~10-21g, collision) baked into each USD.
     # Colors (red / green / blue, 3 toys each) applied at reset.
-    toy_0 = AssetBaseCfg(prim_path="{ENV_REGEX_NS}/Toy_0", spawn=sim_utils.UsdFileCfg(usd_path=_TOY_USDS[0]), init_state=AssetBaseCfg.InitialStateCfg(pos=_TOY_POSITIONS[0]))  # noqa: E501
-    toy_1 = AssetBaseCfg(prim_path="{ENV_REGEX_NS}/Toy_1", spawn=sim_utils.UsdFileCfg(usd_path=_TOY_USDS[1]), init_state=AssetBaseCfg.InitialStateCfg(pos=_TOY_POSITIONS[1]))  # noqa: E501
-    toy_2 = AssetBaseCfg(prim_path="{ENV_REGEX_NS}/Toy_2", spawn=sim_utils.UsdFileCfg(usd_path=_TOY_USDS[2]), init_state=AssetBaseCfg.InitialStateCfg(pos=_TOY_POSITIONS[2]))  # noqa: E501
-    toy_3 = AssetBaseCfg(prim_path="{ENV_REGEX_NS}/Toy_3", spawn=sim_utils.UsdFileCfg(usd_path=_TOY_USDS[3]), init_state=AssetBaseCfg.InitialStateCfg(pos=_TOY_POSITIONS[3]))  # noqa: E501
-    toy_4 = AssetBaseCfg(prim_path="{ENV_REGEX_NS}/Toy_4", spawn=sim_utils.UsdFileCfg(usd_path=_TOY_USDS[4]), init_state=AssetBaseCfg.InitialStateCfg(pos=_TOY_POSITIONS[4]))  # noqa: E501
-    toy_5 = AssetBaseCfg(prim_path="{ENV_REGEX_NS}/Toy_5", spawn=sim_utils.UsdFileCfg(usd_path=_TOY_USDS[5]), init_state=AssetBaseCfg.InitialStateCfg(pos=_TOY_POSITIONS[5]))  # noqa: E501
-    toy_6 = AssetBaseCfg(prim_path="{ENV_REGEX_NS}/Toy_6", spawn=sim_utils.UsdFileCfg(usd_path=_TOY_USDS[6]), init_state=AssetBaseCfg.InitialStateCfg(pos=_TOY_POSITIONS[6]))  # noqa: E501
-    toy_7 = AssetBaseCfg(prim_path="{ENV_REGEX_NS}/Toy_7", spawn=sim_utils.UsdFileCfg(usd_path=_TOY_USDS[7]), init_state=AssetBaseCfg.InitialStateCfg(pos=_TOY_POSITIONS[7]))  # noqa: E501
-    toy_8 = AssetBaseCfg(prim_path="{ENV_REGEX_NS}/Toy_8", spawn=sim_utils.UsdFileCfg(usd_path=_TOY_USDS[8]), init_state=AssetBaseCfg.InitialStateCfg(pos=_TOY_POSITIONS[8]))  # noqa: E501
+    toy_0: RigidObjectCfg = RigidObjectCfg(prim_path="{ENV_REGEX_NS}/Toy_0", spawn=sim_utils.UsdFileCfg(usd_path=_TOY_USDS[0]), init_state=RigidObjectCfg.InitialStateCfg(pos=_TOY_POSITIONS[0]))  # noqa: E501
+    toy_1: RigidObjectCfg = RigidObjectCfg(prim_path="{ENV_REGEX_NS}/Toy_1", spawn=sim_utils.UsdFileCfg(usd_path=_TOY_USDS[1]), init_state=RigidObjectCfg.InitialStateCfg(pos=_TOY_POSITIONS[1]))  # noqa: E501
+    toy_2: RigidObjectCfg = RigidObjectCfg(prim_path="{ENV_REGEX_NS}/Toy_2", spawn=sim_utils.UsdFileCfg(usd_path=_TOY_USDS[2]), init_state=RigidObjectCfg.InitialStateCfg(pos=_TOY_POSITIONS[2]))  # noqa: E501
+    toy_3: RigidObjectCfg = RigidObjectCfg(prim_path="{ENV_REGEX_NS}/Toy_3", spawn=sim_utils.UsdFileCfg(usd_path=_TOY_USDS[3]), init_state=RigidObjectCfg.InitialStateCfg(pos=_TOY_POSITIONS[3]))  # noqa: E501
+    toy_4: RigidObjectCfg = RigidObjectCfg(prim_path="{ENV_REGEX_NS}/Toy_4", spawn=sim_utils.UsdFileCfg(usd_path=_TOY_USDS[4]), init_state=RigidObjectCfg.InitialStateCfg(pos=_TOY_POSITIONS[4]))  # noqa: E501
+    toy_5: RigidObjectCfg = RigidObjectCfg(prim_path="{ENV_REGEX_NS}/Toy_5", spawn=sim_utils.UsdFileCfg(usd_path=_TOY_USDS[5]), init_state=RigidObjectCfg.InitialStateCfg(pos=_TOY_POSITIONS[5]))  # noqa: E501
+    toy_6: RigidObjectCfg = RigidObjectCfg(prim_path="{ENV_REGEX_NS}/Toy_6", spawn=sim_utils.UsdFileCfg(usd_path=_TOY_USDS[6]), init_state=RigidObjectCfg.InitialStateCfg(pos=_TOY_POSITIONS[6]))  # noqa: E501
+    toy_7: RigidObjectCfg = RigidObjectCfg(prim_path="{ENV_REGEX_NS}/Toy_7", spawn=sim_utils.UsdFileCfg(usd_path=_TOY_USDS[7]), init_state=RigidObjectCfg.InitialStateCfg(pos=_TOY_POSITIONS[7]))  # noqa: E501
+    toy_8: RigidObjectCfg = RigidObjectCfg(prim_path="{ENV_REGEX_NS}/Toy_8", spawn=sim_utils.UsdFileCfg(usd_path=_TOY_USDS[8]), init_state=RigidObjectCfg.InitialStateCfg(pos=_TOY_POSITIONS[8]))  # noqa: E501
