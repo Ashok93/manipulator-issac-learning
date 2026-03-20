@@ -198,12 +198,12 @@ def download() -> None:
     from huggingface_hub import snapshot_download
 
     print(f"Downloading assets from {HF_ENV_REPO} → {OUT_DIR}")
-    # local_dir=REPO_ROOT so the repo path assets/toy_sorting/... maps to
-    # REPO_ROOT/assets/toy_sorting/... without double-nesting.
+    # local_dir=SIM_ROOT so the HF repo path assets/toy_sorting/... maps to
+    # SIM_ROOT/assets/toy_sorting/... (where the scene config expects them).
     snapshot_download(
         repo_id=HF_ENV_REPO,
         repo_type="model",
-        local_dir=str(REPO_ROOT),
+        local_dir=str(SIM_ROOT),
         allow_patterns=["assets/toy_sorting/**"],
     )
     print("Download complete.")
