@@ -1,5 +1,11 @@
 """Isaac Lab InteractiveSceneCfg for the toy-sorting task.
 
+Layout
+------
+Robot at back-center (0, -0.10) facing +Y.  All toys and boxes are in a
+forward arc within the SO-ARM 101's ~22 cm practical reach.  Positions are
+defaults — the env randomizes them on every reset().
+
 Asset notes (measured with scripts/inspect_assets.py, all Z-up, mpu=1.0):
   Table049       height=0.80 m   → placed at z=-0.80 so surface lands at z=0
   Kit1_Box       base at z=0     → place at z=0 (open-top 15×15×5 cm container)
@@ -61,23 +67,26 @@ _TOY_USDS = [
 ]
 
 # ---------------------------------------------------------------------------
-# Table surface = world z=0.
+# Table surface = world z=0.  Robot at back-center, everything in front.
 # All Kit1 assets have their base face at z=0 in local space, so init pos z=0
 # places them flush on the table with no offset required.
 # ---------------------------------------------------------------------------
 
-# 3 sorting boxes — spread along the back edge of the table (y=+0.22)
+# Robot base is at (0, -0.10, 0) facing +Y. All objects in front, within reach.
+# SO-ARM 101 practical reach ~20-22cm, shoulder pan ±110°.
+
+# 3 sorting boxes — arc at far reach (~20-22cm from robot base)
 _BOX_POSITIONS = [
-    (-0.22, 0.22, 0.0),
-    ( 0.00, 0.22, 0.0),
-    ( 0.22, 0.22, 0.0),
+    (-0.12,  0.08, 0.0),   # left
+    ( 0.00,  0.12, 0.0),   # center (slightly further, dead ahead)
+    ( 0.12,  0.08, 0.0),   # right
 ]
 
-# 3×3 toy grid in front of the boxes, centred on the table
+# 3×3 toy grid — compact cluster in front of robot (~8-16cm from base)
 _TOY_XY = [
-    (-0.15, -0.10), (0.00, -0.10), (0.15, -0.10),
-    (-0.15,  0.02), (0.00,  0.02), (0.15,  0.02),
-    (-0.15,  0.13), (0.00,  0.13), (0.15,  0.13),
+    (-0.06, -0.02), (0.00, -0.02), (0.06, -0.02),   # near row
+    (-0.06,  0.02), (0.00,  0.02), (0.06,  0.02),   # middle row
+    (-0.06,  0.06), (0.00,  0.06), (0.06,  0.06),   # far row
 ]
 _TOY_POSITIONS = [(*xy, 0.0) for xy in _TOY_XY]
 

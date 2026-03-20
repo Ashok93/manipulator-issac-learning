@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import random
 from dataclasses import dataclass
 from typing import Sequence
@@ -141,6 +142,70 @@ class ToySortingEnv(gym.Env):
             self._apply_color(f"{env_prefix}/Toy_{i}", self.cfg.colors[self._toy_color_assignments[i]])
 
     # ------------------------------------------------------------------
+    # Position randomization
+    # ------------------------------------------------------------------
+
+    # Robot base at (0, -0.10). Arm faces +Y, shoulder pan ±110°.
+    _ROBOT_XY = (0.0, -0.10)
+    _MAX_REACH = 0.22       # 22cm practical reach
+    _ARC_HALF_ANGLE = 1.4   # ~80° each side of +Y (within ±110° pan)
+    _BOX_RADIUS = 0.08      # half-diagonal of 15×15cm box
+    _TOY_RADIUS = 0.025     # ~2.5cm half-size for collision
+    _MIN_CLEARANCE = 0.02   # 2cm gap between objects
+
+    def _sample_in_arc(self, min_r: float, max_r: float) -> tuple[float, float]:
+        """Sample a random (x, y) in the robot's forward arc."""
+        r = random.uniform(min_r, max_r)
+        angle = random.uniform(-self._ARC_HALF_ANGLE, self._ARC_HALF_ANGLE)
+        x = self._ROBOT_XY[0] + r * math.sin(angle)
+        y = self._ROBOT_XY[1] + r * math.cos(angle)
+        return x, y
+
+    def _randomize_positions(self) -> None:
+        """Randomize toy and box positions within the robot's reachable arc."""
+        import omni.usd
+        from pxr import Gf, UsdGeom
+
+        stage = omni.usd.get_context().get_stage()
+        env_prefix = "/World/envs/env_0"
+
+        placed: list[tuple[float, float, float]] = []  # (x, y, radius)
+
+        def _try_place(min_r: float, max_r: float, obj_radius: float) -> tuple[float, float] | None:
+            for _ in range(200):
+                x, y = self._sample_in_arc(min_r, max_r)
+                if all(
+                    math.hypot(x - px, y - py) > obj_radius + pr + self._MIN_CLEARANCE
+                    for px, py, pr in placed
+                ):
+                    placed.append((x, y, obj_radius))
+                    return x, y
+            return None
+
+        def _set_translate(prim_path: str, pos: tuple[float, float, float]) -> None:
+            prim = stage.GetPrimAtPath(prim_path)
+            if not prim.IsValid():
+                return
+            xformable = UsdGeom.Xformable(prim)
+            for op in xformable.GetOrderedXformOps():
+                if op.GetOpType() == UsdGeom.XformOp.TypeTranslate:
+                    op.Set(Gf.Vec3d(*pos))
+                    return
+            xformable.AddTranslateOp().Set(Gf.Vec3d(*pos))
+
+        # Place boxes first (larger objects, at far reach)
+        for i in range(3):
+            xy = _try_place(0.16, self._MAX_REACH, self._BOX_RADIUS)
+            if xy:
+                _set_translate(f"{env_prefix}/Box_{i}", (xy[0], xy[1], 0.0))
+
+        # Place toys (smaller, closer to robot)
+        for i in range(self.cfg.num_toys):
+            xy = _try_place(0.08, 0.18, self._TOY_RADIUS)
+            if xy:
+                _set_translate(f"{env_prefix}/Toy_{i}", (xy[0], xy[1], 0.0))
+
+    # ------------------------------------------------------------------
     # Gym interface
     # ------------------------------------------------------------------
 
@@ -148,6 +213,7 @@ class ToySortingEnv(gym.Env):
         super().reset(seed=seed)
         self._scene.reset()
         self._assign_colors()
+        self._randomize_positions()
         self._apply_colors()
         return self._get_observations(), {}
 
