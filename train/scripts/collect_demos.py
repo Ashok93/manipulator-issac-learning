@@ -46,6 +46,7 @@ Calibration: hold phone screen-up, top edge toward the robot, press B1.
 from __future__ import annotations
 
 import argparse
+import logging
 import os
 import time
 from pathlib import Path
@@ -70,6 +71,7 @@ from lerobot.processor.converters import (
     transition_to_robot_action,
 )
 from lerobot.datasets.lerobot_dataset import LeRobotDataset
+from lerobot.utils.robot_utils import precise_sleep
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -186,6 +188,7 @@ def record_episode(
     teleop: Phone,
     dataset: LeRobotDataset,
     task: str,
+    fps: int,
     teleop_action_processor: RobotProcessorPipeline,
     robot_action_processor: RobotProcessorPipeline,
 ) -> int:
@@ -198,6 +201,8 @@ def record_episode(
     print("[collect_demos] Hold B1 to control robot. Tap B8 to end episode.")
 
     while True:
+        start_loop_t = time.perf_counter()
+
         # ----- Phone read -----
         phone_action = teleop.get_action()
         if not phone_action:
@@ -224,10 +229,6 @@ def record_episode(
         # ----- Convert to radians and send to sim -----
         sim_action = robot_action_to_sim_action(joint_action)
 
-        if frames % 30 == 0:
-            enabled = phone_action.get("phone.enabled", False)
-            print(f"  frame={frames} enabled={enabled}")
-
         obs, _reward, terminated, truncated = sim.step(sim_action)
         robot_obs = sim_obs_to_robot_obs(obs)
 
@@ -241,6 +242,19 @@ def record_episode(
 
         if terminated or truncated:
             break
+
+        # ----- FPS cap (matches lerobot record_loop / teleop_loop) -----
+        dt_s = time.perf_counter() - start_loop_t
+        sleep_time_s = 1 / fps - dt_s
+        if sleep_time_s < 0:
+            logging.warning(
+                f"Loop running slower ({1 / dt_s:.1f} Hz) than target ({fps} Hz)."
+            )
+        precise_sleep(max(sleep_time_s, 0.0))
+
+        if frames % 30 == 0:
+            loop_s = time.perf_counter() - start_loop_t
+            print(f"  frame={frames} {1 / loop_s:.0f} Hz")
 
     dataset.save_episode(task=task)
     print(f"[collect_demos] Episode saved — {frames} frames.")
@@ -329,6 +343,7 @@ def main() -> None:
             teleop=teleop,
             dataset=dataset,
             task=args.task,
+            fps=args.fps,
             teleop_action_processor=teleop_action_processor,
             robot_action_processor=robot_action_processor,
         )
