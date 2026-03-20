@@ -55,7 +55,7 @@ from lerobot.utils.rotation import Rotation
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-_TRAIN_ROOT = Path(__file__).resolve().parents[2]  # train/
+_TRAIN_ROOT = Path(__file__).resolve().parents[1]  # train/scripts/ → train/
 _REPO_ROOT = _TRAIN_ROOT.parent                    # repo root
 _URDF = str(_REPO_ROOT / "sim" / "assets" / "toy_sorting" / "so_arm101" / "urdf" / "so_arm101.urdf")
 _EE_FRAME = "gripper_frame_link"
