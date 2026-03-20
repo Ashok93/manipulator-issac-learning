@@ -35,4 +35,4 @@ RUN printf '{\n    "file_format_version" : "1.0.0",\n    "layer": {\n        "na
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin:$PATH"
 
-WORKDIR /workspace
+WORKDIR /workspace/sim

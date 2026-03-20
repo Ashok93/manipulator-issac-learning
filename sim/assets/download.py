@@ -29,11 +29,12 @@ from pathlib import Path
 from dotenv import load_dotenv
 load_dotenv()
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+SIM_ROOT = Path(__file__).resolve().parents[1]       # sim/
+REPO_ROOT = SIM_ROOT.parent                          # repo root
 LIGHTWHEEL_DIR = REPO_ROOT / "Lightwheel_Xx8T7EPOMd_KitchenRoom"
 TOYROOM_DIR    = REPO_ROOT / "lightwheel_toyroom"
 SO_ARM_SRC_DIR = REPO_ROOT / "so_arm101"
-OUT_DIR = REPO_ROOT / "assets" / "toy_sorting"
+OUT_DIR = SIM_ROOT / "assets" / "toy_sorting"
 
 HF_ENV_REPO = os.environ.get("HF_ENV_REPO", "AshDash93/toy-sorting-env")
 

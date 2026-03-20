@@ -11,10 +11,17 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 ASSETS = REPO_ROOT / "assets" / "toy_sorting"
 
 FILES = {
-    "table":  ASSETS / "Table049/Table049.usd",
-    "tray":   ASSETS / "InteractiveAsset/SM_P_Flavour_02/Collected_SM_P_Flavour_02/Props/SM_P_Tray_01.usd",
-    "box":    ASSETS / "Kitchen_Other/Kitchen_Box.usd",
-    "disk":   ASSETS / "Kitchen_Other/Kitchen_Disk001.usd",
+    "table":     ASSETS / "Table049/Table049.usd",
+    "box":       ASSETS / "Kit1/Kit1_Box.usd",
+    "cube":      ASSETS / "Kit1/Kit1_Cube3x3.usd",
+    "cylinder":  ASSETS / "Kit1/Kit1_Cylinder.usd",
+    "sphere":    ASSETS / "Kit1/Kit1_Sphere.usd",
+    "torus":     ASSETS / "Kit1/Kit1_Torus.usd",
+    "triangle":  ASSETS / "Kit1/Kit1_Triangle.usd",
+    "cross":     ASSETS / "Kit1/Kit1_Cross.usd",
+    "cuboid":    ASSETS / "Kit1/Kit1_Cuboid6x3.usd",
+    "bridge":    ASSETS / "Kit1/Kit1_Bridge.usd",
+    "icosphere": ASSETS / "Kit1/Kit1_Icosphere.usd",
 }
 
 for name, path in FILES.items():
