@@ -73,7 +73,7 @@ def make_so_arm101_cfg(urdf_path: str):
         ),
         init_state=ArticulationCfg.InitialStateCfg(
             pos=(0.0, -0.10, 0.0),    # back-center of workspace, on table surface
-            rot=(0.7071, 0.0, 0.0, -0.7071),  # -90° around Z → arm faces +Y
+            rot=(0.7071, 0.0, 0.0, 0.7071),  # +90° around Z → arm faces +Y
             joint_pos={
                 "shoulder_pan": JOINT_DEFAULTS.shoulder_pan,
                 "shoulder_lift": JOINT_DEFAULTS.shoulder_lift,
