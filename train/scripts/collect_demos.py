@@ -3,12 +3,12 @@
 Connects to the sim server (ZMQ) running on a remote GPU server, drives it
 with phone teleoperation via HEBI Mobile I/O, and records a LeRobotDataset.
 
-Uses LeRobot's actual processor pipeline classes — no manual reimplementation:
-  Pipeline 1 (phone → EE pose):
+Uses LeRobot's processor pipeline (matches examples/phone_to_so100/record.py):
+  Pipeline 1 — teleop_action_processor (phone → EE pose):
     MapPhoneActionToRobotAction → EEReferenceAndDelta
-    → EEBoundsAndSafety → GripperVelocityToJoint
-  Pipeline 2 (EE pose → joint targets):
-    InverseKinematicsEEToJoints
+    → EEBoundsAndSafety(max_ee_step_m=0.20) → GripperVelocityToJoint
+  Pipeline 2 — robot_action_processor (EE pose → joint targets):
+    InverseKinematicsEEToJoints(initial_guess_current_joints=True)
 
 Architecture
 ------------
@@ -283,7 +283,8 @@ def main() -> None:
         joint_names=_MOTOR_NAMES,
     )
 
-    # Pipeline 1: phone action → EE pose (same as LeRobot phone_to_so100 examples)
+    # Pipeline 1: phone action → EE pose + gripper position
+    # Matches LeRobot examples/phone_to_so100/record.py exactly.
     teleop_action_processor = RobotProcessorPipeline(
         steps=[
             MapPhoneActionToRobotAction(platform=phone_os),
@@ -291,10 +292,11 @@ def main() -> None:
                 kinematics=kinematics,
                 end_effector_step_sizes={"x": 0.5, "y": 0.5, "z": 0.5},
                 motor_names=_MOTOR_NAMES,
+                use_latched_reference=True,
             ),
             EEBoundsAndSafety(
                 end_effector_bounds={"min": [-1.0, -1.0, -1.0], "max": [1.0, 1.0, 1.0]},
-                max_ee_step_m=0.10,
+                max_ee_step_m=0.20,
             ),
             GripperVelocityToJoint(speed_factor=20.0),
         ],
