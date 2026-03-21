@@ -5,16 +5,21 @@
 #   bash scripts/start_vr_teleop.sh --task Isaac-Stack-Cube-Franka-IK-Abs-v0
 set -e
 
-STEAMVR_DIR="/root/.local/share/Steam/steamapps/common/SteamVR"
+STEAMVR_DIR=$(find /root -path "*/steamapps/common/SteamVR" -type d 2>/dev/null | head -1)
 ISAACLAB_DIR="/opt/IsaacLab"
 
+if [ -z "$STEAMVR_DIR" ]; then
+    echo "[start_vr] ERROR: SteamVR not found. Run Steam and install SteamVR first."
+    exit 1
+fi
+
 # ---------------------------------------------------------------------------
-# 1. Start SteamVR
+# 1. Start SteamVR via Steam
 # ---------------------------------------------------------------------------
 if ! pgrep -f vrserver > /dev/null 2>&1; then
     echo "[start_vr] Starting SteamVR ..."
-    "$STEAMVR_DIR/bin/vrstartup.sh" &
-    sleep 5
+    steam steam://run/250820 &
+    sleep 8
 fi
 
 # ---------------------------------------------------------------------------

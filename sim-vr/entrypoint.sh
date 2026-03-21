@@ -2,22 +2,18 @@
 set -e
 
 # ---------------------------------------------------------------------------
-# 1. Install SteamVR via steamcmd on first run
+# 1. First run: launch Steam to login and install SteamVR
 # ---------------------------------------------------------------------------
-STEAMVR_DIR="/root/.local/share/Steam/steamapps/common/SteamVR"
-if [ ! -d "$STEAMVR_DIR" ]; then
-    echo "[sim-vr] === First run: installing SteamVR ==="
-    if [ -z "$STEAM_USER" ]; then
-        echo "[sim-vr] Set STEAM_USER env var or pass it interactively."
-        read -rp "Steam username: " STEAM_USER
-    fi
-    /opt/steamcmd/steamcmd.sh \
-        +@sSteamCmdForcePlatformType linux \
-        +login "$STEAM_USER" \
-        +app_update 250820 validate \
-        +quit
-    echo "[sim-vr] SteamVR installed."
+# SteamVR can end up in either /root/Steam or /root/.local/share/Steam
+STEAMVR_DIR=$(find /root -path "*/steamapps/common/SteamVR" -type d 2>/dev/null | head -1)
+if [ -z "$STEAMVR_DIR" ]; then
+    echo "[sim-vr] === First run: SteamVR not found ==="
+    echo "[sim-vr] Launching Steam — log in and install SteamVR (app ID 250820)."
+    echo "[sim-vr] After SteamVR is installed, close Steam and re-run the container."
+    steam
+    exit 0
 fi
+echo "[sim-vr] SteamVR found at: $STEAMVR_DIR"
 
 # ---------------------------------------------------------------------------
 # 2. Register ALVR driver with SteamVR (idempotent)
@@ -29,12 +25,13 @@ if [ -x "$VRPATHREG" ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# 3. Enable hand tracking in SteamVR config (ALVR settings)
+# 3. Enable hand tracking in SteamVR config
 # ---------------------------------------------------------------------------
-VRSETTINGS="/root/.local/share/Steam/config/steamvr.vrsettings"
-if [ -f "$VRSETTINGS" ]; then
+# Find steamvr.vrsettings wherever Steam put it
+VRSETTINGS=$(find /root -name "steamvr.vrsettings" 2>/dev/null | head -1)
+if [ -n "$VRSETTINGS" ]; then
     python3.11 -c "
-import json, sys
+import json
 path = '$VRSETTINGS'
 with open(path) as f:
     cfg = json.load(f)
@@ -59,13 +56,9 @@ bash /workspace/sim-vr/scripts/fix_xcr_layer.sh 2>/dev/null || true
 # ---------------------------------------------------------------------------
 # 6. Set XR_RUNTIME_JSON to SteamVR
 # ---------------------------------------------------------------------------
-STEAMXR_JSON="$STEAMVR_DIR/steamxr_linux64.json"
-if [ -f "$STEAMXR_JSON" ]; then
+STEAMXR_JSON=$(find /root -name "steamxr_linux64.json" 2>/dev/null | head -1)
+if [ -n "$STEAMXR_JSON" ]; then
     export XR_RUNTIME_JSON="$STEAMXR_JSON"
-else
-    # Fallback: search for it
-    FOUND=$(find /root/.local/share/Steam -name "steamxr_linux64.json" 2>/dev/null | head -1)
-    [ -n "$FOUND" ] && export XR_RUNTIME_JSON="$FOUND"
 fi
 
 source .venv/bin/activate
