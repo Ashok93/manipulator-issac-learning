@@ -49,6 +49,7 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - steam-data:/root/.local/share/Steam
       - steam-config:/root/.steam
+      - steamcmd-data:/root/Steam
     runtime: nvidia
     network_mode: host
     shm_size: "4gb"
@@ -60,3 +61,4 @@ services:
 volumes:
   steam-data:
   steam-config:
+  steamcmd-data:
