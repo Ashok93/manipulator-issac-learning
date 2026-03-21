@@ -47,9 +47,8 @@ services:
     volumes:
       - ./sim-vr:/workspace/sim-vr:rw
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      - steam-data:/home/vruser/.local/share/Steam
-      - steam-config:/home/vruser/.steam
-      - steamcmd-data:/home/vruser/Steam
+      - ${HOME}/.local/share/Steam:/home/vruser/.local/share/Steam:rw
+      - ${HOME}/.steam:/home/vruser/.steam:rw
     runtime: nvidia
     network_mode: host
     shm_size: "4gb"
@@ -58,7 +57,3 @@ services:
     stdin_open: true
     tty: true
 
-volumes:
-  steam-data:
-  steam-config:
-  steamcmd-data:

@@ -2,22 +2,14 @@
 set -e
 
 # ---------------------------------------------------------------------------
-# 0. Fix volume ownership (Docker creates volumes as root)
-# ---------------------------------------------------------------------------
-for d in "$HOME/.local/share/Steam" "$HOME/.steam" "$HOME/Steam"; do
-    [ -d "$d" ] && sudo chown -R "$(id -u):$(id -g)" "$d" 2>/dev/null || true
-done
-
-# ---------------------------------------------------------------------------
-# 1. First run: launch Steam to login and install SteamVR
+# 1. Check SteamVR is available (mounted from host)
 # ---------------------------------------------------------------------------
 STEAMVR_DIR=$(find "$HOME" -path "*/steamapps/common/SteamVR" -type d 2>/dev/null | head -1)
 if [ -z "$STEAMVR_DIR" ]; then
-    echo "[sim-vr] === First run: SteamVR not found ==="
-    echo "[sim-vr] Launching Steam — log in and install SteamVR (app ID 250820)."
-    echo "[sim-vr] After SteamVR is installed, close Steam and re-run the container."
-    steam
-    exit 0
+    echo "[sim-vr] ERROR: SteamVR not found."
+    echo "[sim-vr] Install Steam + SteamVR on the host VM first."
+    echo "[sim-vr] The host's ~/.local/share/Steam is bind-mounted into this container."
+    exit 1
 fi
 echo "[sim-vr] SteamVR found at: $STEAMVR_DIR"
 
@@ -56,7 +48,7 @@ uv sync --extra sim
 # ---------------------------------------------------------------------------
 # 5. Fix OpenXR XCR capture layer (needs isaaclab installed)
 # ---------------------------------------------------------------------------
-bash /workspace/sim-vr/scripts/fix_xcr_layer.sh 2>/dev/null || true
+sudo bash /workspace/sim-vr/scripts/fix_xcr_layer.sh 2>/dev/null || true
 
 # ---------------------------------------------------------------------------
 # 6. Set XR_RUNTIME_JSON to SteamVR

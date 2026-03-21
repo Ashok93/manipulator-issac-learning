@@ -62,16 +62,7 @@ ENV PATH="/home/vruser/.local/bin:$PATH"
 USER root
 
 # ---------------------------------------------------------------------------
-# Install Steam client (full client needed for Steam Runtime + SteamVR)
-# ---------------------------------------------------------------------------
-RUN wget -q https://cdn.akamai.steamstatic.com/client/installer/steam.deb \
-    && dpkg -i steam.deb || true \
-    && apt-get update && apt-get install -f -y \
-    && rm steam.deb \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# ---------------------------------------------------------------------------
-# Install ALVR streamer v20.14.1
+# Install ALVR streamer v20.14.1 (Steam + SteamVR are bind-mounted from host)
 # ---------------------------------------------------------------------------
 RUN mkdir -p /opt/alvr \
     && cd /tmp \
