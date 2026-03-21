@@ -102,7 +102,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 uv sync --extra sim
 
-echo "=== [8/8] OpenXR XCR capture layer ==="
+echo "=== [8/9] Clone IsaacLab for teleop scripts ==="
+if [ ! -d "$HOME/IsaacLab" ]; then
+    git clone --depth 1 https://github.com/isaac-sim/IsaacLab.git "$HOME/IsaacLab"
+else
+    echo "[INFO] IsaacLab already cloned at ~/IsaacLab"
+fi
+
+echo "=== [9/9] OpenXR XCR capture layer ==="
 sudo mkdir -p /usr/share/openxr/1/api_layers/implicit.d
 bash scripts/fix_xcr_layer.sh 2>/dev/null || true
 
