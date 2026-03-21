@@ -1,0 +1,49 @@
+[project]
+name = "manipulator-isaac-vr-teleop"
+version = "0.1.0"
+description = "VR teleop for Isaac Lab via ALVR + SteamVR + Quest 3"
+requires-python = "==3.11.*"
+dependencies = [
+    "numpy>=1.26.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+sim = [
+    "isaaclab[isaacsim,all]==2.3.2.post1",
+    "gymnasium>=0.29.0",
+]
+
+# ---------------------------------------------------------------------------
+# uv configuration
+# ---------------------------------------------------------------------------
+
+[tool.uv]
+# Solve only for the Linux/3.11 target where Isaac Sim runs.
+environments = [
+    "sys_platform == 'linux' and python_version == '3.11'",
+]
+# pywin32 is Windows-only but some transitive dep omits the platform marker.
+override-dependencies = [
+    "pywin32 ; sys_platform == 'win32'",
+]
+
+[tool.uv.sources]
+# isaacsim is pulled in transitively by isaaclab[isaacsim,all].
+isaacsim = [{ index = "nvidia" }]
+
+[[tool.uv.index]]
+name = "nvidia"
+url = "https://pypi.nvidia.com"
+explicit = true
+
+# ---------------------------------------------------------------------------
+# Build
+# ---------------------------------------------------------------------------
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

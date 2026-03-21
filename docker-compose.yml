@@ -32,3 +32,31 @@ services:
       - sim
     stdin_open: true
     tty: true
+
+  sim-vr:
+    build:
+      context: sim-vr
+      dockerfile: Dockerfile
+    environment:
+      ACCEPT_EULA: "Y"
+      OMNI_KIT_ACCEPT_EULA: "YES"
+      DISPLAY: ${DISPLAY:-:0}
+      NVIDIA_VISIBLE_DEVICES: "all"
+      NVIDIA_DRIVER_CAPABILITIES: "all"
+      STEAM_USER: "${STEAM_USER:-}"
+    volumes:
+      - ./sim-vr:/workspace/sim-vr:rw
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - steam-data:/root/.local/share/Steam
+      - steam-config:/root/.steam
+    runtime: nvidia
+    network_mode: host
+    shm_size: "4gb"
+    cap_add:
+      - SYS_NICE
+    stdin_open: true
+    tty: true
+
+volumes:
+  steam-data:
+  steam-config:

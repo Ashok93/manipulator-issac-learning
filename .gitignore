@@ -1,6 +1,7 @@
 .venv/
 sim/.venv/
 train/.venv/
+sim-vr/.venv/
 __pycache__/
 *.pyc
 .pytest_cache/
