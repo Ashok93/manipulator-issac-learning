@@ -18,7 +18,7 @@ RUN dpkg --add-architecture i386 && apt-get update && apt-get install -y --no-in
         libsm6 libxi6 libxrandr2 libxt6 libglib2.0-0 libnghttp2-14 \
         unzip software-properties-common \
         # Steam 32-bit deps
-        libgl1-mesa-glx:i386 lib32gcc-s1 lib32stdc++6 \
+        libgl1-mesa-dri:i386 libglx-mesa0:i386 lib32gcc-s1 lib32stdc++6 \
         # OpenXR loader
         libopenxr-loader1 libopenxr-dev \
         # Capabilities for vrcompositor
