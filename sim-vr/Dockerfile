@@ -21,6 +21,9 @@ RUN dpkg --add-architecture i386 && apt-get update && apt-get install -y --no-in
         libgl1-mesa-dri:i386 libglx-mesa0:i386 lib32gcc-s1 lib32stdc++6 \
         # OpenXR loader
         libopenxr-loader1 libopenxr-dev \
+        # ALVR dashboard GUI deps
+        libva2 libva-drm2 libva-x11-2 \
+        libxcursor1 libxrender1 libxfixes3 libxkbcommon0 libxkbcommon-x11-0 \
         # Capabilities for vrcompositor
         libcap2-bin \
     && add-apt-repository ppa:deadsnakes/ppa \
