@@ -47,7 +47,10 @@ RUN printf '{\n    "file_format_version" : "1.0.0",\n    "layer": {\n        "na
 # ---------------------------------------------------------------------------
 # Create non-root user (Steam refuses to run as root)
 # ---------------------------------------------------------------------------
-RUN useradd -m -s /bin/bash -G video,audio vruser
+RUN apt-get update && apt-get install -y --no-install-recommends sudo \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN useradd -m -s /bin/bash -G video,audio,sudo vruser \
+    && echo "vruser ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 ENV HOME=/home/vruser
 
 # ---------------------------------------------------------------------------

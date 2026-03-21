@@ -2,6 +2,13 @@
 set -e
 
 # ---------------------------------------------------------------------------
+# 0. Fix volume ownership (Docker creates volumes as root)
+# ---------------------------------------------------------------------------
+for d in "$HOME/.local/share/Steam" "$HOME/.steam" "$HOME/Steam"; do
+    [ -d "$d" ] && sudo chown -R "$(id -u):$(id -g)" "$d" 2>/dev/null || true
+done
+
+# ---------------------------------------------------------------------------
 # 1. First run: launch Steam to login and install SteamVR
 # ---------------------------------------------------------------------------
 STEAMVR_DIR=$(find "$HOME" -path "*/steamapps/common/SteamVR" -type d 2>/dev/null | head -1)
