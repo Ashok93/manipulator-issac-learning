@@ -98,7 +98,8 @@ if ! command -v uv &>/dev/null; then
 fi
 
 echo "=== [7/8] Isaac Lab + Isaac Sim (via uv) ==="
-cd "$(dirname "$0")"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
 uv sync --extra sim
 
 echo "=== [8/8] OpenXR XCR capture layer ==="
