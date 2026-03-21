@@ -1,20 +1,23 @@
 #!/bin/bash
 # Start SteamVR + ALVR, then launch Isaac Lab teleop.
-# Usage:
-#   bash scripts/start_vr_teleop.sh
-#   bash scripts/start_vr_teleop.sh --task Isaac-Stack-Cube-Franka-IK-Abs-v0
+# Usage (from repo root):
+#   bash sim-vr/scripts/start_vr_teleop.sh --task Isaac-Stack-Cube-Franka-IK-Abs-v0
 set -e
 
-STEAMVR_DIR=$(find /root -path "*/steamapps/common/SteamVR" -type d 2>/dev/null | head -1)
-ISAACLAB_DIR="/opt/IsaacLab"
+STEAMVR_DIR=$(find "$HOME" -path "*/steamapps/common/SteamVR" -type d 2>/dev/null | head -1)
+ALVR_DIR="$HOME/alvr_streamer_linux"
+SIMVR_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 if [ -z "$STEAMVR_DIR" ]; then
-    echo "[start_vr] ERROR: SteamVR not found. Run Steam and install SteamVR first."
+    echo "[start_vr] ERROR: SteamVR not found. Run bare-install.sh first."
     exit 1
 fi
 
+# Export XR runtime
+export XR_RUNTIME_JSON=$(find "$HOME" -name "steamxr_linux64.json" 2>/dev/null | head -1)
+
 # ---------------------------------------------------------------------------
-# 1. Start SteamVR via Steam
+# 1. Start SteamVR
 # ---------------------------------------------------------------------------
 if ! pgrep -f vrserver > /dev/null 2>&1; then
     echo "[start_vr] Starting SteamVR ..."
@@ -27,7 +30,7 @@ fi
 # ---------------------------------------------------------------------------
 if ! pgrep -f alvr_dashboard > /dev/null 2>&1; then
     echo "[start_vr] Starting ALVR dashboard ..."
-    /opt/alvr/bin/alvr_dashboard &
+    "$ALVR_DIR/bin/alvr_dashboard" &
     sleep 3
 fi
 
@@ -36,11 +39,12 @@ echo "[start_vr] Connect Quest via ALVR, then press Enter to launch teleop."
 read -r
 
 # ---------------------------------------------------------------------------
-# 3. Launch Isaac Lab teleop from cloned repo
+# 3. Launch Isaac Lab teleop
 # ---------------------------------------------------------------------------
-cd "$ISAACLAB_DIR"
+cd "$SIMVR_DIR"
+source .venv/bin/activate
 
-uv run python scripts/environments/teleoperation/teleop_se3_agent.py \
+python "$(find .venv -path '*/teleoperation/teleop_se3_agent.py' 2>/dev/null | head -1)" \
     --teleop_device handtracking \
     --device cpu \
     "$@"

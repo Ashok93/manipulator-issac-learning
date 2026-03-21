@@ -1,0 +1,138 @@
+#!/bin/bash
+# Bare-metal install of VR teleop stack on a Vast.ai KVM VM (Ubuntu 22.04/24.04 + NVIDIA GPU).
+# Run once on a fresh VM. After this, use start_vr_teleop.sh to launch.
+#
+# Prerequisites: NVIDIA GPU + drivers already installed (nvidia-smi works).
+# Usage: bash sim-vr/bare-install.sh
+set -e
+
+echo "=== [1/8] Vulkan / EGL / GPU Renderer ==="
+sudo mkdir -p /etc/vulkan/icd.d /etc/vulkan/implicit_layer.d /usr/share/glvnd/egl_vendor.d
+
+echo '{
+    "file_format_version" : "1.0.0",
+    "ICD" : {
+        "library_path" : "libGLX_nvidia.so.0",
+        "api_version" : "1.3.194"
+    }
+}' | sudo tee /etc/vulkan/icd.d/nvidia_icd.json > /dev/null
+
+echo '{
+    "file_format_version" : "1.0.0",
+    "ICD" : {
+        "library_path" : "libEGL_nvidia.so.0"
+    }
+}' | sudo tee /usr/share/glvnd/egl_vendor.d/10_nvidia.json > /dev/null
+
+grep -q VK_DRIVER_FILES ~/.bashrc 2>/dev/null || \
+    echo 'export VK_DRIVER_FILES=/etc/vulkan/icd.d/nvidia_icd.json' >> ~/.bashrc
+export VK_DRIVER_FILES=/etc/vulkan/icd.d/nvidia_icd.json
+
+sudo apt-get update
+sudo apt-get install -y vulkan-tools
+
+echo "=== [2/8] System dependencies ==="
+sudo dpkg --add-architecture i386
+sudo apt-get update
+sudo apt-get install -y \
+    curl ca-certificates wget unzip software-properties-common \
+    libgl1-mesa-glx:i386 lib32gcc-s1 lib32stdc++6 \
+    libopenxr-loader1 libopenxr-dev \
+    libva2 libva-drm2 libva-x11-2 \
+    libxcursor1 libxrender1 libxfixes3 libxkbcommon0 libxkbcommon-x11-0 \
+    libcap2-bin \
+    || true
+# Noble (24.04) may not have libgl1-mesa-glx:i386 — try alternatives
+sudo apt-get install -y libgl1-mesa-dri:i386 libglx-mesa0:i386 2>/dev/null || true
+
+echo "=== [3/8] Steam ==="
+if ! command -v steam &>/dev/null; then
+    wget -q https://cdn.akamai.steamstatic.com/client/installer/steam.deb
+    sudo dpkg -i steam.deb || true
+    sudo apt-get install -f -y
+    rm -f steam.deb
+    echo "[INFO] Steam installed. You need to log in manually: run 'steam' and sign in."
+else
+    echo "[INFO] Steam already installed."
+fi
+
+echo "=== [4/8] SteamVR ==="
+STEAMVR_DIR="$HOME/.local/share/Steam/steamapps/common/SteamVR"
+if [ ! -d "$STEAMVR_DIR" ]; then
+    echo "[INFO] SteamVR not found. Install it from Steam Library (app ID 250820)."
+    echo "[INFO] Run: steam steam://install/250820"
+else
+    echo "[INFO] SteamVR already installed at $STEAMVR_DIR"
+    # Set vrcompositor capabilities
+    sudo setcap CAP_SYS_NICE+eip "$STEAMVR_DIR/bin/linux64/vrcompositor-launcher" 2>/dev/null || true
+fi
+
+echo "=== [5/8] ALVR streamer v20.14.1 ==="
+if [ ! -d "$HOME/alvr_streamer_linux" ]; then
+    cd ~
+    wget -q https://github.com/alvr-org/ALVR/releases/download/v20.14.1/alvr_streamer_linux.tar.gz
+    tar -xzf alvr_streamer_linux.tar.gz
+    rm -f alvr_streamer_linux.tar.gz
+    echo "[INFO] ALVR extracted to ~/alvr_streamer_linux"
+else
+    echo "[INFO] ALVR already installed."
+fi
+
+# Register ALVR driver with SteamVR
+if [ -d "$STEAMVR_DIR" ]; then
+    export LD_LIBRARY_PATH="$STEAMVR_DIR/bin/linux64:${LD_LIBRARY_PATH:-}"
+    "$STEAMVR_DIR/bin/linux64/vrpathreg" adddriver ~/alvr_streamer_linux/lib64/alvr 2>/dev/null || true
+    echo "[INFO] ALVR driver registered with SteamVR."
+fi
+
+echo "=== [6/8] Python 3.11 + uv ==="
+if ! command -v python3.11 &>/dev/null; then
+    sudo add-apt-repository -y ppa:deadsnakes/ppa
+    sudo apt-get update
+    sudo apt-get install -y python3.11 python3.11-venv python3.11-dev
+fi
+
+if ! command -v uv &>/dev/null; then
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    export PATH="$HOME/.local/bin:$PATH"
+fi
+
+echo "=== [7/8] Isaac Lab + Isaac Sim (via uv) ==="
+cd "$(dirname "$0")"
+uv sync --extra sim
+
+echo "=== [8/8] OpenXR XCR capture layer ==="
+sudo mkdir -p /usr/share/openxr/1/api_layers/implicit.d
+bash scripts/fix_xcr_layer.sh 2>/dev/null || true
+
+# Enable hand tracking in SteamVR config
+VRSETTINGS=$(find "$HOME" -name "steamvr.vrsettings" 2>/dev/null | head -1)
+if [ -n "$VRSETTINGS" ]; then
+    python3.11 -c "
+import json
+path = '$VRSETTINGS'
+with open(path) as f:
+    cfg = json.load(f)
+cfg.setdefault('driver_alvr_server', {})['handTrackingEnabled'] = True
+cfg.setdefault('steamvr', {}).update({'enableHandTracking': True, 'handTrackingEnabled': True})
+with open(path, 'w') as f:
+    json.dump(cfg, f, indent=3)
+print('[INFO] Hand tracking enabled in SteamVR config.')
+" 2>/dev/null || true
+fi
+
+# Set XR_RUNTIME_JSON
+STEAMXR_JSON=$(find "$HOME" -name "steamxr_linux64.json" 2>/dev/null | head -1)
+if [ -n "$STEAMXR_JSON" ]; then
+    grep -q XR_RUNTIME_JSON ~/.bashrc 2>/dev/null || \
+        echo "export XR_RUNTIME_JSON=\"$STEAMXR_JSON\"" >> ~/.bashrc
+    echo "[INFO] XR_RUNTIME_JSON set to $STEAMXR_JSON"
+fi
+
+echo ""
+echo "=== DONE ==="
+echo "Steps remaining:"
+echo "  1. Log in to Steam if not done: steam"
+echo "  2. Install SteamVR if not done: steam steam://install/250820"
+echo "  3. Install Tailscale if needed: curl -fsSL https://tailscale.com/install.sh | sh && sudo tailscale up"
+echo "  4. Start VR teleop: bash sim-vr/scripts/start_vr_teleop.sh --task Isaac-Stack-Cube-Franka-IK-Abs-v0"
