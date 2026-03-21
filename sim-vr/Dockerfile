@@ -45,10 +45,18 @@ RUN printf '{\n    "file_format_version" : "1.0.0",\n    "layer": {\n        "na
         > /etc/vulkan/implicit_layer.d/nvidia_layers.json
 
 # ---------------------------------------------------------------------------
-# Install uv
+# Create non-root user (Steam refuses to run as root)
 # ---------------------------------------------------------------------------
+RUN useradd -m -s /bin/bash -G video,audio vruser
+ENV HOME=/home/vruser
+
+# ---------------------------------------------------------------------------
+# Install uv (for vruser)
+# ---------------------------------------------------------------------------
+USER vruser
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-ENV PATH="/root/.local/bin:$PATH"
+ENV PATH="/home/vruser/.local/bin:$PATH"
+USER root
 
 # ---------------------------------------------------------------------------
 # Install Steam client (full client needed for Steam Runtime + SteamVR)
@@ -81,10 +89,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends git \
     && apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # ---------------------------------------------------------------------------
-# Copy project files
+# Set permissions and copy project files
 # ---------------------------------------------------------------------------
+RUN mkdir -p /workspace/sim-vr /opt/IsaacLab \
+    && chown -R vruser:vruser /workspace/sim-vr /opt/IsaacLab /opt/alvr
+
 WORKDIR /workspace/sim-vr
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
+USER vruser
 ENTRYPOINT ["/entrypoint.sh"]

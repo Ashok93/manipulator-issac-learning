@@ -4,8 +4,7 @@ set -e
 # ---------------------------------------------------------------------------
 # 1. First run: launch Steam to login and install SteamVR
 # ---------------------------------------------------------------------------
-# SteamVR can end up in either /root/Steam or /root/.local/share/Steam
-STEAMVR_DIR=$(find /root -path "*/steamapps/common/SteamVR" -type d 2>/dev/null | head -1)
+STEAMVR_DIR=$(find "$HOME" -path "*/steamapps/common/SteamVR" -type d 2>/dev/null | head -1)
 if [ -z "$STEAMVR_DIR" ]; then
     echo "[sim-vr] === First run: SteamVR not found ==="
     echo "[sim-vr] Launching Steam — log in and install SteamVR (app ID 250820)."
@@ -27,8 +26,7 @@ fi
 # ---------------------------------------------------------------------------
 # 3. Enable hand tracking in SteamVR config
 # ---------------------------------------------------------------------------
-# Find steamvr.vrsettings wherever Steam put it
-VRSETTINGS=$(find /root -name "steamvr.vrsettings" 2>/dev/null | head -1)
+VRSETTINGS=$(find "$HOME" -name "steamvr.vrsettings" 2>/dev/null | head -1)
 if [ -n "$VRSETTINGS" ]; then
     python3.11 -c "
 import json
@@ -56,7 +54,7 @@ bash /workspace/sim-vr/scripts/fix_xcr_layer.sh 2>/dev/null || true
 # ---------------------------------------------------------------------------
 # 6. Set XR_RUNTIME_JSON to SteamVR
 # ---------------------------------------------------------------------------
-STEAMXR_JSON=$(find /root -name "steamxr_linux64.json" 2>/dev/null | head -1)
+STEAMXR_JSON=$(find "$HOME" -name "steamxr_linux64.json" 2>/dev/null | head -1)
 if [ -n "$STEAMXR_JSON" ]; then
     export XR_RUNTIME_JSON="$STEAMXR_JSON"
 fi
