@@ -8,4 +8,6 @@ export XR_RUNTIME_JSON=$(find ~/.local/share/Steam ~/.steam -name "steamxr_linux
 "$VENV/bin/python" "$REPO/scripts/patch_teleop_active.py" ~/IsaacLab/scripts/environments/teleoperation/teleop_se3_agent.py
 
 cd ~/IsaacLab
-"$VENV/bin/python" scripts/environments/teleoperation/teleop_se3_agent.py --task Isaac-Stack-Cube-Franka-IK-Abs-v0 --teleop_device handtracking --device cpu "$@"
+TASK="${1:-Isaac-Stack-Cube-Franka-IK-Rel-v0}"
+shift 2>/dev/null || true
+"$VENV/bin/python" scripts/environments/teleoperation/teleop_se3_agent.py --task "$TASK" --teleop_device handtracking --device cpu "$@"
