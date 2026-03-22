@@ -83,7 +83,17 @@ sudo bash sim-vr/scripts/fix_xcr_layer.sh
 
 This copies the XCR capture layer JSON to `/usr/share/openxr/1/api_layers/implicit.d/` with the correct absolute path to `libxcr-capture-oxr-layer.so`.
 
-### 7. Tailscale (optional, for ALVR connection)
+### 7. Teleop Active Patch (required for ALVR)
+
+Isaac Lab's teleop script defaults to `teleoperation_active = False` for XR devices, waiting for a "start" message from NVIDIA's IsaacXRTeleopClient. Since we use ALVR (not the NVIDIA client), we must patch the script:
+
+```bash
+python3 sim-vr/scripts/patch_teleop_active.py ~/IsaacLab/scripts/environments/teleoperation/teleop_se3_agent.py
+```
+
+`run_teleop.sh` applies this patch automatically on each launch.
+
+### 8. Tailscale (optional, for ALVR connection)
 
 If the Quest and VM are not on the same LAN:
 
@@ -124,10 +134,12 @@ bash sim-vr/run_teleop.sh
 
 ```
 sim-vr/
-  bare-install.sh          # One-time setup for fresh VMs
-  run_teleop.sh            # Quick-launch teleop (assumes SteamVR running)
-  pyproject.toml           # Python deps (isaaclab via uv)
+  bare-install.sh                    # One-time setup for fresh VMs
+  run_teleop.sh                      # Quick-launch teleop (assumes SteamVR running)
+  pyproject.toml                     # Python deps (isaaclab via uv)
   scripts/
-    start_vr_teleop.sh     # Full launch: SteamVR + ALVR + teleop
-    fix_xcr_layer.sh       # Register OpenXR XCR capture layer
+    start_vr_teleop.sh               # Full launch: SteamVR + ALVR + teleop
+    fix_xcr_layer.sh                 # Register OpenXR XCR capture layer
+    fix_steamvr_handtracking.py      # Enable hand tracking in steamvr.vrsettings
+    patch_teleop_active.py           # Patch teleop to auto-activate for ALVR
 ```
