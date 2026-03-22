@@ -12,8 +12,10 @@ bash sim-vr/bare-install.sh
 
 # 2. Complete the manual steps below
 
-# 3. Launch VR teleop
-bash sim-vr/scripts/start_vr_teleop.sh --task Isaac-Stack-Cube-Franka-IK-Abs-v0
+# 3. Start SteamVR + ALVR, connect Quest
+
+# 4. Launch VR teleop (defaults to relative mode)
+bash sim-vr/run_teleop.sh
 ```
 
 ## Manual Steps After bare-install.sh
@@ -59,7 +61,19 @@ Open the ALVR dashboard (`~/alvr_streamer_linux/bin/alvr_dashboard`) and under t
 
 ### 5. Enable SteamVR Hand Tracking
 
-`bare-install.sh` does this automatically, but verify in `~/.local/share/Steam/config/steamvr.vrsettings`:
+The `steamvr.vrsettings` path varies by install. Find it first:
+
+```bash
+find /home -name "steamvr.vrsettings" 2>/dev/null
+```
+
+Then run the fix script (or `bare-install.sh` does this automatically):
+
+```bash
+python3 sim-vr/scripts/fix_steamvr_handtracking.py
+```
+
+Verify it contains:
 
 ```json
 {
@@ -109,7 +123,7 @@ Install Tailscale on the Quest as well, then connect ALVR using the Tailscale IP
 ### Full launch (SteamVR + ALVR + teleop)
 
 ```bash
-bash sim-vr/scripts/start_vr_teleop.sh --task Isaac-Stack-Cube-Franka-IK-Abs-v0
+bash sim-vr/scripts/start_vr_teleop.sh
 ```
 
 This starts SteamVR, ALVR, waits for Quest connection, then launches teleop.
@@ -117,8 +131,14 @@ This starts SteamVR, ALVR, waits for Quest connection, then launches teleop.
 ### Teleop only (SteamVR + ALVR already running)
 
 ```bash
+# Default: relative mode (recommended)
 bash sim-vr/run_teleop.sh
+
+# Override task:
+bash sim-vr/run_teleop.sh Isaac-Stack-Cube-Franka-IK-Abs-v0
 ```
+
+**Use Rel (relative) mode** — absolute mode causes the robot to jump to your hand position on startup, which twists joints. Relative mode moves the robot by deltas from your hand movement.
 
 ## Troubleshooting
 
@@ -126,9 +146,12 @@ bash sim-vr/run_teleop.sh
 |---------|-----|
 | `xrCreateInstance failed` | Run `sudo bash sim-vr/scripts/fix_xcr_layer.sh` |
 | `vrstartup.sh: no steam runtime environment set` | Install full Steam client (not steamcmd), set launch options per step 3 |
+| `Failed to unblock ALVR driver: steamvr.vrsettings does not exist` | Launch SteamVR at least once first so it creates the config file |
 | ALVR dashboard won't start | Install missing GUI libs: `sudo apt install libva2 libva-drm2 libva-x11-2 libxcursor1 libxrender1 libxfixes3` |
-| `XR_RUNTIME_JSON` not set | `export XR_RUNTIME_JSON=$(find ~/.local/share/Steam -name "steamxr_linux64.json" 2>/dev/null \| head -1)` |
+| `XR_RUNTIME_JSON` not set | `export XR_RUNTIME_JSON=$(find ~/.local/share/Steam ~/.steam -name "steamxr_linux64.json" 2>/dev/null \| head -1)` |
 | Vulkan errors | Verify `nvidia_icd.json` exists at `/etc/vulkan/icd.d/` and `VK_DRIVER_FILES` is set |
+| Scene renders in VR but hands don't control robot | Ensure teleop active patch is applied (step 7) |
+| Robot twists/jumps on startup | Use Rel mode (default), not Abs mode |
 
 ## File Structure
 
