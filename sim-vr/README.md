@@ -38,13 +38,16 @@ Or install from the Steam Library UI.
 
 This is required so SteamVR starts correctly on headless Linux:
 
-1. Open Steam Library
-2. Right-click **SteamVR** -> **Properties**
-3. In **Launch Options**, paste:
-
-```
-~/.local/share/Steam/steamapps/common/SteamVR/bin/vrmonitor.sh %command%
-```
+1. Find your actual vrmonitor.sh path:
+   ```bash
+   find /home -path "*/SteamVR/bin/vrmonitor.sh" 2>/dev/null
+   ```
+2. Open Steam Library
+3. Right-click **SteamVR** -> **Properties**
+4. In **Launch Options**, paste the path followed by `%command%`, e.g.:
+   ```
+   /home/user/.steam/debian-installation/steamapps/common/SteamVR/bin/vrmonitor.sh %command%
+   ```
 
 ### 4. Configure ALVR Settings
 
