@@ -1,167 +1,119 @@
 # sim-vr: VR Teleoperation for Isaac Lab
 
-Bare-metal VR teleop stack for Isaac Lab on a Linux GPU VM (tested on Vast.ai KVM, Ubuntu 22.04/24.04).
+VR hand tracking teleop for Isaac Lab on a Linux GPU VM (tested on Vast.ai KVM, Ubuntu 22.04/24.04).
 
-Uses **Quest 3** (or Quest 2) with **ALVR** streaming to **SteamVR** on the VM, and Isaac Lab's OpenXR hand tracking teleop.
+**Stack:** Quest 3 → ALVR → SteamVR → OpenXR → Isaac Lab (Franka arm)
 
-## Quick Start
+---
+
+## Step 1 — Run bare-install.sh
+
+On a fresh VM with NVIDIA drivers:
 
 ```bash
-# 1. Run the install script on a fresh VM with NVIDIA drivers
 bash sim-vr/bare-install.sh
-
-# 2. Complete the manual steps below
-
-# 3. Start SteamVR + ALVR, connect Quest
-
-# 4. Launch VR teleop (defaults to relative mode)
-bash sim-vr/run_teleop.sh
 ```
 
-## Manual Steps After bare-install.sh
+This installs: Vulkan/EGL configs, Steam, ALVR v20.14.1, Python 3.11, uv, Isaac Lab, and registers the OpenXR XCR capture layer.
 
-### 1. Log in to Steam
+---
+
+## Step 2 — Log in to Steam and install SteamVR
 
 ```bash
 steam
 ```
 
-Sign in with your Steam account. This must be done interactively at least once.
-
-### 2. Install SteamVR
+Sign in interactively (required at least once). Then install SteamVR:
 
 ```bash
 steam steam://install/250820
 ```
 
-Or install from the Steam Library UI.
+---
 
-### 3. Set SteamVR Launch Options
+## Step 3 — Set SteamVR Launch Options
 
-This is required so SteamVR starts correctly on headless Linux:
-
-1. Find your actual vrmonitor.sh path:
-   ```bash
-   find /home -path "*/SteamVR/bin/vrmonitor.sh" 2>/dev/null
-   ```
-2. Open Steam Library
-3. Right-click **SteamVR** -> **Properties**
-4. In **Launch Options**, paste the path followed by `%command%`, e.g.:
-   ```
-   /home/user/.steam/debian-installation/steamapps/common/SteamVR/bin/vrmonitor.sh %command%
-   ```
-
-### 4. Configure ALVR Settings
-
-Open the ALVR dashboard (`~/alvr_streamer_linux/bin/alvr_dashboard`) and under the **Headset** tab, ensure:
-
-- **Hand skeleton** -> ON
-- **Hand tracking interaction** -> ON
-- **SteamVR Input 2.0** -> ON
-
-### 5. Enable SteamVR Hand Tracking
-
-The `steamvr.vrsettings` path varies by install. Find it first:
+Find your vrmonitor.sh path:
 
 ```bash
-find /home -name "steamvr.vrsettings" 2>/dev/null
+find /home -path "*/SteamVR/bin/vrmonitor.sh" 2>/dev/null
 ```
 
-Then run the fix script (or `bare-install.sh` does this automatically):
+Then in Steam Library → right-click **SteamVR** → **Properties** → **Launch Options**, paste:
+
+```
+/home/user/.steam/debian-installation/steamapps/common/SteamVR/bin/vrmonitor.sh %command%
+```
+
+(Use the actual path from the find command above.)
+
+---
+
+## Step 4 — Configure ALVR
+
+Open the ALVR dashboard and under **Headset** tab, set:
+
+- **Hand skeleton** → ON
+- **SteamVR Input 2.0** → ON
+- **Hand tracking interaction** → ON
+
+---
+
+## Step 5 — Start SteamVR + ALVR
 
 ```bash
-python3 sim-vr/scripts/fix_steamvr_handtracking.py
+bash sim-vr/scripts/start_steam_alvr.sh
 ```
 
-Verify it contains:
+This starts SteamVR and the ALVR dashboard. Then:
 
-```json
-{
-   "steamvr": {
-      "enableHandTracking": true,
-      "handTrackingEnabled": true
-   },
-   "driver_alvr_server": {
-      "handTrackingEnabled": true
-   }
-}
-```
+1. Put on Quest
+2. Open ALVR app on Quest
+3. Connect to the VM (use Tailscale IP if not on same LAN)
+4. Click **Trust** in the ALVR dashboard → Devices tab
 
-### 6. OpenXR XCR Capture Layer
+---
 
-`bare-install.sh` runs `scripts/fix_xcr_layer.sh` to register Isaac Sim's OpenXR API layer. If you get `xrCreateInstance failed` errors, re-run:
+## Step 6 — Launch Teleop
 
 ```bash
-sudo bash sim-vr/scripts/fix_xcr_layer.sh
-```
-
-This copies the XCR capture layer JSON to `/usr/share/openxr/1/api_layers/implicit.d/` with the correct absolute path to `libxcr-capture-oxr-layer.so`.
-
-### 7. Teleop Active Patch (required for ALVR)
-
-Isaac Lab's teleop script defaults to `teleoperation_active = False` for XR devices, waiting for a "start" message from NVIDIA's IsaacXRTeleopClient. Since we use ALVR (not the NVIDIA client), we must patch the script:
-
-```bash
-python3 sim-vr/scripts/patch_teleop_active.py ~/IsaacLab/scripts/environments/teleoperation/teleop_se3_agent.py
-```
-
-`run_teleop.sh` applies this patch automatically on each launch.
-
-### 8. Tailscale (optional, for ALVR connection)
-
-If the Quest and VM are not on the same LAN:
-
-```bash
-curl -fsSL https://tailscale.com/install.sh | sh
-sudo tailscale up
-```
-
-Install Tailscale on the Quest as well, then connect ALVR using the Tailscale IP.
-
-## Usage
-
-### Full launch (SteamVR + ALVR + teleop)
-
-```bash
-bash sim-vr/scripts/start_vr_teleop.sh
-```
-
-This starts SteamVR, ALVR, waits for Quest connection, then launches teleop.
-
-### Teleop only (SteamVR + ALVR already running)
-
-```bash
-# Default: relative mode (recommended)
 bash sim-vr/run_teleop.sh
+```
 
-# Override task:
+Defaults to relative mode (`Isaac-Stack-Cube-Franka-IK-Rel-v0`). To override the task:
+
+```bash
 bash sim-vr/run_teleop.sh Isaac-Stack-Cube-Franka-IK-Abs-v0
 ```
 
-**Use Rel (relative) mode** — absolute mode causes the robot to jump to your hand position on startup, which twists joints. Relative mode moves the robot by deltas from your hand movement.
+**Use Rel (relative) mode** — Abs mode causes the robot to jump to your hand position on startup.
+
+---
 
 ## Troubleshooting
 
 | Symptom | Fix |
 |---------|-----|
-| `xrCreateInstance failed` | Run `sudo bash sim-vr/scripts/fix_xcr_layer.sh` |
-| `vrstartup.sh: no steam runtime environment set` | Install full Steam client (not steamcmd), set launch options per step 3 |
-| `Failed to unblock ALVR driver: steamvr.vrsettings does not exist` | Launch SteamVR at least once first so it creates the config file |
-| ALVR dashboard won't start | Install missing GUI libs: `sudo apt install libva2 libva-drm2 libva-x11-2 libxcursor1 libxrender1 libxfixes3` |
-| `XR_RUNTIME_JSON` not set | `export XR_RUNTIME_JSON=$(find ~/.local/share/Steam ~/.steam -name "steamxr_linux64.json" 2>/dev/null \| head -1)` |
-| Vulkan errors | Verify `nvidia_icd.json` exists at `/etc/vulkan/icd.d/` and `VK_DRIVER_FILES` is set |
-| Scene renders in VR but hands don't control robot | Ensure teleop active patch is applied (step 7) |
-| Robot twists/jumps on startup | Use Rel mode (default), not Abs mode |
+| `xrCreateInstance failed` | `sudo bash sim-vr/scripts/fix_xcr_layer.sh` |
+| `Failed to unblock ALVR driver: steamvr.vrsettings does not exist` | Launch SteamVR at least once first so it creates the config |
+| SteamVR won't start | Check launch options path is correct (Step 3) |
+| ALVR dashboard won't open | `sudo apt install libva2 libva-drm2 libva-x11-2 libxcursor1 libxrender1 libxfixes3` |
+| Scene renders in VR but hands don't move robot | Re-run `run_teleop.sh` — it auto-applies the teleop active patch |
+| Robot twists/jumps on startup | Use Rel mode (default), not Abs |
+| `XR_RUNTIME_JSON` not set | `export XR_RUNTIME_JSON=$(find ~/.steam -name "steamxr_linux64.json" 2>/dev/null \| head -1)` |
+
+---
 
 ## File Structure
 
 ```
 sim-vr/
-  bare-install.sh                    # One-time setup for fresh VMs
-  run_teleop.sh                      # Quick-launch teleop (assumes SteamVR running)
+  bare-install.sh                    # One-time VM setup
+  run_teleop.sh                      # Launch Isaac Lab teleop (run after Step 5)
   pyproject.toml                     # Python deps (isaaclab via uv)
   scripts/
-    start_vr_teleop.sh               # Full launch: SteamVR + ALVR + teleop
+    start_steam_alvr.sh              # Start SteamVR + ALVR (Step 5)
     fix_xcr_layer.sh                 # Register OpenXR XCR capture layer
     fix_steamvr_handtracking.py      # Enable hand tracking in steamvr.vrsettings
     patch_teleop_active.py           # Patch teleop to auto-activate for ALVR
