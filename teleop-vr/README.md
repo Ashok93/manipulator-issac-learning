@@ -106,6 +106,14 @@ bash teleop-vr/run_record_demos.sh --task Isaac-Stack-Cube-Franka-IK-Rel-v0 \
   --enable_cameras
 ```
 
+The same launcher also works with the visuomotor Mimic task:
+
+```bash
+bash teleop-vr/run_record_demos.sh --task Isaac-Stack-Cube-Franka-IK-Rel-Visuomotor-Mimic-v0 \
+  --dataset_file ./datasets/franka_visuomotor_demos.hdf5 \
+  --enable_cameras
+```
+
 For recording, the same hotkeys apply:
 
 - `s` to start recording

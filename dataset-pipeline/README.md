@@ -1,13 +1,21 @@
 # Dataset Pipeline
 
-This folder is reserved for offline processing of Isaac Lab demos.
+This folder holds the offline part of the Isaac Lab data workflow.
 
-Planned responsibilities:
+## Inputs
 
-- Mimic augmentation of raw HDF5 demos
-- dataset validation
-- HDF5 to LeRobot conversion
-- dataset packaging for training
+- Raw Isaac Lab HDF5 demos recorded in `teleop-vr/`
 
-This should stay headless and separate from the live VR collection runtime.
+## Outputs
+
+- Annotated HDF5 demos
+- Mimic-augmented visual datasets
+- LeRobot-formatted datasets for training
+
+## Planned Utilities
+
+- wrappers around Isaac Lab `annotate_demos.py`
+- wrappers around Isaac Lab Mimic dataset generation
+- conversion helpers from Isaac HDF5 to LeRobot format
+- dataset validation / sanity checks
 
