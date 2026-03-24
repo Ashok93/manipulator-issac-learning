@@ -17,14 +17,11 @@ from __future__ import annotations
 import argparse
 import logging
 import queue
-import select
-import sys
-import termios
 import threading
-import tty
 from collections.abc import Callable
 
 from isaaclab.app import AppLauncher
+from isaaclab_session_utils import build_teleop_interface, configure_xr_env, spawn_stdin_reader
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -52,32 +49,6 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _spawn_stdin_reader(command_queue: "queue.SimpleQueue[str]", stop_event: threading.Event) -> threading.Thread:
-    """Read single-key commands from stdin without blocking the sim loop."""
-
-    def _reader() -> None:
-        if not sys.stdin.isatty():
-            return
-
-        fd = sys.stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
-        try:
-            tty.setcbreak(fd)
-            while not stop_event.is_set():
-                ready, _, _ = select.select([sys.stdin], [], [], 0.1)
-                if not ready:
-                    continue
-                ch = sys.stdin.read(1)
-                if ch:
-                    command_queue.put(ch.lower())
-        finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-
-    thread = threading.Thread(target=_reader, name="teleop-stdin-reader", daemon=True)
-    thread.start()
-    return thread
-
-
 def main() -> None:
     parser = _build_parser()
     args_cli = parser.parse_args()
@@ -96,12 +67,8 @@ def main() -> None:
     simulation_app = app_launcher.app
 
     import gymnasium as gym
-    import logging
     import torch
     import isaaclab_tasks  # noqa: F401
-    from isaaclab.devices import Se3Gamepad, Se3GamepadCfg, Se3Keyboard, Se3KeyboardCfg, Se3SpaceMouse, Se3SpaceMouseCfg
-    from isaaclab.devices.openxr import remove_camera_configs
-    from isaaclab.devices.teleop_device_factory import create_teleop_device
     from isaaclab.envs import ManagerBasedRLEnvCfg
     from isaaclab.managers import TerminationTermCfg as DoneTerm
     from isaaclab_tasks.manager_based.manipulation.lift import mdp
@@ -126,9 +93,7 @@ def main() -> None:
         env_cfg.commands.object_pose.resampling_time_range = (1.0e9, 1.0e9)
         env_cfg.terminations.object_reached_goal = DoneTerm(func=mdp.object_reached_goal)
 
-    if args_cli.xr:
-        env_cfg = remove_camera_configs(env_cfg)
-        env_cfg.sim.render.antialiasing_mode = "DLSS"
+    env_cfg = configure_xr_env(env_cfg, enable_cameras=args_cli.enable_cameras)
 
     try:
         env = gym.make(args_cli.task, cfg=env_cfg).unwrapped
@@ -165,49 +130,7 @@ def main() -> None:
     if args_cli.xr:
         teleoperation_active = False
 
-    teleop_interface = None
-    try:
-        if hasattr(env_cfg, "teleop_devices") and args_cli.teleop_device in env_cfg.teleop_devices.devices:
-            teleop_interface = create_teleop_device(
-                args_cli.teleop_device,
-                env_cfg.teleop_devices.devices,
-                teleoperation_callbacks,
-            )
-        else:
-            logger.warning(
-                "No teleop device '%s' found in environment config. Creating default.",
-                args_cli.teleop_device,
-            )
-            sensitivity = args_cli.sensitivity
-            if args_cli.teleop_device.lower() == "keyboard":
-                teleop_interface = Se3Keyboard(
-                    Se3KeyboardCfg(pos_sensitivity=0.05 * sensitivity, rot_sensitivity=0.05 * sensitivity)
-                )
-            elif args_cli.teleop_device.lower() == "spacemouse":
-                teleop_interface = Se3SpaceMouse(
-                    Se3SpaceMouseCfg(pos_sensitivity=0.05 * sensitivity, rot_sensitivity=0.05 * sensitivity)
-                )
-            elif args_cli.teleop_device.lower() == "gamepad":
-                teleop_interface = Se3Gamepad(
-                    Se3GamepadCfg(pos_sensitivity=0.1 * sensitivity, rot_sensitivity=0.1 * sensitivity)
-                )
-            else:
-                logger.error("Unsupported teleop device: %s", args_cli.teleop_device)
-                logger.error("Configure the teleop device in the environment config.")
-                env.close()
-                simulation_app.close()
-                return
-
-        for key, callback in teleoperation_callbacks.items():
-            try:
-                teleop_interface.add_callback(key, callback)
-            except (ValueError, TypeError) as exc:
-                logger.warning("Failed to add callback for key %s: %s", key, exc)
-    except Exception as exc:
-        logger.error("Failed to create teleop interface: %s", exc)
-        env.close()
-        simulation_app.close()
-        return
+    teleop_interface = build_teleop_interface(args_cli, env_cfg, teleoperation_callbacks, logger)
 
     if teleop_interface is None:
         logger.error("Failed to create teleop interface")
@@ -223,7 +146,7 @@ def main() -> None:
 
     command_queue: "queue.SimpleQueue[str]" = queue.SimpleQueue()
     stop_event = threading.Event()
-    _spawn_stdin_reader(command_queue, stop_event)
+    spawn_stdin_reader(command_queue, stop_event)
 
     try:
         while simulation_app.is_running() and not stop_event.is_set():

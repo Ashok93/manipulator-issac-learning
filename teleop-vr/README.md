@@ -96,6 +96,23 @@ While the teleop terminal is focused, use:
 - `r` to reset the environment
 - `q` to quit
 
+## Step 7 — Record Demos
+
+Use the recording launcher to write raw Isaac Lab HDF5 episodes:
+
+```bash
+bash teleop-vr/run_record_demos.sh --task Isaac-Stack-Cube-Franka-IK-Rel-v0 \
+  --dataset_file ./datasets/franka_demos.hdf5 \
+  --enable_cameras
+```
+
+For recording, the same hotkeys apply:
+
+- `s` to start recording
+- `p` to pause recording
+- `r` to reset / finalize the current episode
+- `q` to quit
+
 ---
 
 ## Troubleshooting
@@ -118,10 +135,13 @@ While the teleop terminal is focused, use:
 teleop-vr/
   bare-install.sh                    # One-time VM setup
   run_teleop.sh                      # Launch Isaac Lab teleop (run after Step 5)
+  run_record_demos.sh                # Launch Isaac Lab demo recording
   pyproject.toml                     # Python deps (isaaclab via uv)
   scripts/
+    isaaclab_session_utils.py        # Shared hotkey / device helpers
     start_steam_alvr.sh              # Start SteamVR + ALVR (Step 5)
     fix_xcr_layer.sh                 # Register OpenXR XCR capture layer
     fix_steamvr_handtracking.py      # Enable hand tracking in steamvr.vrsettings
     teleop_se3_agent_hotkeys.py      # Local launcher with keyboard session controls
+    record_demos_with_hotkeys.py     # Local demo recorder with keyboard session controls
 ```
