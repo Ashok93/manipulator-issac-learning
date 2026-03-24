@@ -69,8 +69,8 @@ The target task is **toy sorting** (colored objects → matching trays), but we'
 
 ## Infrastructure
 
-- **VR teleop:** Vast.ai KVM GPU VM, bare-metal (no Docker for sim-vr)
-- **Sim runtime:** `sim-vr/` package — `bare-install.sh` + `run_teleop.sh`
+- **VR teleop:** Vast.ai KVM GPU VM, bare-metal (no Docker for teleop-vr)
+- **Sim runtime:** `teleop-vr/` package — `bare-install.sh` + `run_teleop.sh`
 - **Training:** `train/` package — LeRobot (Python 3.12, uv)
 - **HuggingFace user:** AshDash93
 

@@ -1,4 +1,4 @@
-# sim-vr: VR Teleoperation for Isaac Lab
+# teleop-vr: VR Teleoperation for Isaac Lab
 
 VR hand tracking teleop for Isaac Lab on a Linux GPU VM (tested on Vast.ai KVM, Ubuntu 22.04/24.04).
 
@@ -11,7 +11,7 @@ VR hand tracking teleop for Isaac Lab on a Linux GPU VM (tested on Vast.ai KVM, 
 On a fresh VM with NVIDIA drivers:
 
 ```bash
-bash sim-vr/bare-install.sh
+bash teleop-vr/bare-install.sh
 ```
 
 This installs: Vulkan/EGL configs, Steam, ALVR v20.14.1, Python 3.11, uv, Isaac Lab, and registers the OpenXR XCR capture layer.
@@ -63,7 +63,7 @@ Open the ALVR dashboard and under **Headset** tab, set:
 ## Step 5 — Start SteamVR + ALVR
 
 ```bash
-bash sim-vr/scripts/start_steam_alvr.sh
+bash teleop-vr/scripts/start_steam_alvr.sh
 ```
 
 This starts SteamVR and the ALVR dashboard. Then:
@@ -78,13 +78,13 @@ This starts SteamVR and the ALVR dashboard. Then:
 ## Step 6 — Launch Teleop
 
 ```bash
-bash sim-vr/run_teleop.sh
+bash teleop-vr/run_teleop.sh
 ```
 
 Defaults to relative mode (`Isaac-Stack-Cube-Franka-IK-Rel-v0`). To override the task:
 
 ```bash
-bash sim-vr/run_teleop.sh Isaac-Stack-Cube-Franka-IK-Abs-v0
+bash teleop-vr/run_teleop.sh Isaac-Stack-Cube-Franka-IK-Abs-v0
 ```
 
 **Use Rel (relative) mode** — Abs mode causes the robot to jump to your hand position on startup.
@@ -102,7 +102,7 @@ While the teleop terminal is focused, use:
 
 | Symptom | Fix |
 |---------|-----|
-| `xrCreateInstance failed` | `sudo bash sim-vr/scripts/fix_xcr_layer.sh` |
+| `xrCreateInstance failed` | `sudo bash teleop-vr/scripts/fix_xcr_layer.sh` |
 | `Failed to unblock ALVR driver: steamvr.vrsettings does not exist` | Launch SteamVR at least once first so it creates the config |
 | SteamVR won't start | Check launch options path is correct (Step 3) |
 | ALVR dashboard won't open | `sudo apt install libva2 libva-drm2 libva-x11-2 libxcursor1 libxrender1 libxfixes3` |
@@ -115,7 +115,7 @@ While the teleop terminal is focused, use:
 ## File Structure
 
 ```
-sim-vr/
+teleop-vr/
   bare-install.sh                    # One-time VM setup
   run_teleop.sh                      # Launch Isaac Lab teleop (run after Step 5)
   pyproject.toml                     # Python deps (isaaclab via uv)

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Start SteamVR and ALVR dashboard.
-# After connecting Quest in ALVR, run: bash sim-vr/run_teleop.sh
+# After connecting Quest in ALVR, run: bash teleop-vr/run_teleop.sh
 set -e
 
 STEAMVR_DIR=$(find "$HOME" -path "*/steamapps/common/SteamVR" -type d 2>/dev/null | head -1)
@@ -32,5 +32,5 @@ echo ""
 echo "[start_steam_alvr] SteamVR + ALVR are running."
 echo "[start_steam_alvr] Connect your Quest in the ALVR dashboard, then run:"
 echo ""
-echo "    bash sim-vr/run_teleop.sh"
+echo "    bash teleop-vr/run_teleop.sh"
 echo ""

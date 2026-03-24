@@ -2,7 +2,7 @@
 # Dynamically find and register the OpenXR XCR capture layer from the
 # installed isaaclab/isaacsim package.
 
-XCR_JSON=$(find /workspace/sim-vr/.venv -path "*/bin/openxr_xcr_capture_layer.json" 2>/dev/null | head -1)
+XCR_JSON=$(find /workspace/teleop-vr/.venv -path "*/bin/openxr_xcr_capture_layer.json" 2>/dev/null | head -1)
 if [ -z "$XCR_JSON" ]; then
     echo "[fix_xcr_layer] XCR capture layer JSON not found -- skipping"
     exit 0

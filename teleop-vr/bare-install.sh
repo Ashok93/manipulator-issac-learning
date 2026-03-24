@@ -1,9 +1,9 @@
 #!/bin/bash
 # Bare-metal install of VR teleop stack on a Vast.ai KVM VM (Ubuntu 22.04/24.04 + NVIDIA GPU).
-# Run once on a fresh VM. After this, use start_vr_teleop.sh to launch.
+# Run once on a fresh VM. After this, use run_teleop.sh to launch.
 #
 # Prerequisites: NVIDIA GPU + drivers already installed (nvidia-smi works).
-# Usage: bash sim-vr/bare-install.sh
+# Usage: bash teleop-vr/bare-install.sh
 set -e
 
 echo "=== [1/8] Vulkan / EGL / GPU Renderer ==="
@@ -143,4 +143,4 @@ echo "Steps remaining:"
 echo "  1. Log in to Steam if not done: steam"
 echo "  2. Install SteamVR if not done: steam steam://install/250820"
 echo "  3. Install Tailscale if needed: curl -fsSL https://tailscale.com/install.sh | sh && sudo tailscale up"
-echo "  4. Start VR teleop: bash sim-vr/scripts/start_vr_teleop.sh --task Isaac-Stack-Cube-Franka-IK-Abs-v0"
+echo "  4. Start VR teleop: bash teleop-vr/run_teleop.sh Isaac-Stack-Cube-Franka-IK-Abs-v0"
