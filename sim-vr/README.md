@@ -89,6 +89,13 @@ bash sim-vr/run_teleop.sh Isaac-Stack-Cube-Franka-IK-Abs-v0
 
 **Use Rel (relative) mode** — Abs mode causes the robot to jump to your hand position on startup.
 
+While the teleop terminal is focused, use:
+
+- `s` to start teleoperation
+- `p` to pause teleoperation
+- `r` to reset the environment
+- `q` to quit
+
 ---
 
 ## Troubleshooting
@@ -99,7 +106,7 @@ bash sim-vr/run_teleop.sh Isaac-Stack-Cube-Franka-IK-Abs-v0
 | `Failed to unblock ALVR driver: steamvr.vrsettings does not exist` | Launch SteamVR at least once first so it creates the config |
 | SteamVR won't start | Check launch options path is correct (Step 3) |
 | ALVR dashboard won't open | `sudo apt install libva2 libva-drm2 libva-x11-2 libxcursor1 libxrender1 libxfixes3` |
-| Scene renders in VR but hands don't move robot | Re-run `run_teleop.sh` — it auto-applies the teleop active patch |
+| Scene renders in VR but hands don't move robot | Press `s` in the teleop terminal to start teleoperation |
 | Robot twists/jumps on startup | Use Rel mode (default), not Abs |
 | `XR_RUNTIME_JSON` not set | `export XR_RUNTIME_JSON=$(find ~/.steam -name "steamxr_linux64.json" 2>/dev/null \| head -1)` |
 
@@ -116,5 +123,5 @@ sim-vr/
     start_steam_alvr.sh              # Start SteamVR + ALVR (Step 5)
     fix_xcr_layer.sh                 # Register OpenXR XCR capture layer
     fix_steamvr_handtracking.py      # Enable hand tracking in steamvr.vrsettings
-    patch_teleop_active.py           # Patch teleop to auto-activate for ALVR
+    teleop_se3_agent_hotkeys.py      # Local launcher with keyboard session controls
 ```
