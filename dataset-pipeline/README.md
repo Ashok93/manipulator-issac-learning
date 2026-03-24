@@ -19,3 +19,4 @@ This folder holds the offline part of the Isaac Lab data workflow.
 - conversion helpers from Isaac HDF5 to LeRobot format
 - dataset validation / sanity checks
 
+This is the offline path for turning raw state-based demos into annotated and augmented datasets for training.
