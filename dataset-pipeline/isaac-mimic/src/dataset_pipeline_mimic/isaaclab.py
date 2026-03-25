@@ -15,6 +15,7 @@ class IsaacLabInvocation:
 
 _ANNOTATE_SCRIPT = Path("scripts/imitation_learning/isaaclab_mimic/annotate_demos.py")
 _GENERATE_SCRIPT = Path("scripts/imitation_learning/isaaclab_mimic/generate_dataset.py")
+_DEFAULT_ISAACLAB_ROOT = Path("/opt/IsaacLab")
 
 
 def _candidate_roots(explicit_root: str | os.PathLike[str] | None) -> list[Path]:
@@ -26,6 +27,9 @@ def _candidate_roots(explicit_root: str | os.PathLike[str] | None) -> list[Path]
     env_root = os.environ.get("ISAACLAB_ROOT")
     if env_root:
         roots.append(Path(env_root).expanduser().resolve())
+
+    if _DEFAULT_ISAACLAB_ROOT.exists():
+        roots.append(_DEFAULT_ISAACLAB_ROOT.resolve())
 
     for entry in sys.path:
         candidate = Path(entry).expanduser()
@@ -57,7 +61,8 @@ def _resolve_script_path(script_relative: Path, explicit_root: str | os.PathLike
 
     raise FileNotFoundError(
         f"Could not locate Isaac Lab script '{script_relative}'. "
-        "Install Isaac Lab in the uv environment or pass --isaaclab-root to a source tree."
+        "Clone Isaac Lab into /opt/IsaacLab in the container, install Isaac Lab in the uv environment, "
+        "or pass --isaaclab-root to a source tree."
     )
 
 

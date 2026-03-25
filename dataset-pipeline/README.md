@@ -5,6 +5,8 @@ This directory is split into two separate Python packages so the toolchains stay
 - `isaac-mimic/` for Isaac Lab annotation and Mimic generation
 - `lerobot-conversion/` for HDF5 -> LeRobot conversion
 
+The `dataset-mimic` container clones Isaac Lab into `/opt/IsaacLab` during image build, so the normal Mimic commands do not need a host checkout mount.
+
 The shared folder-level convention is:
 
 - raw demos: `dataset-pipeline/franka_demos.hdf5`

@@ -1,5 +1,7 @@
 FROM nvcr.io/nvidia/base/ubuntu:noble-20250619
 
+ARG ISAACLAB_REF=v2.3.1
+
 ENV NVIDIA_VISIBLE_DEVICES=all \
     NVIDIA_DRIVER_CAPABILITIES=all \
     VK_DRIVER_FILES=/etc/vulkan/icd.d/nvidia_icd.json \
@@ -10,7 +12,7 @@ ENV NVIDIA_VISIBLE_DEVICES=all \
 RUN touch /etc/ld.so.nohwcap
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        curl ca-certificates \
+        curl ca-certificates git \
         libatomic1 libegl1 libgl1 libglu1-mesa libglx0 libgomp1 \
         libsm6 libxi6 libxrandr2 libxt6 libglib2.0-0 libnghttp2-14 \
         unzip software-properties-common \
@@ -31,6 +33,8 @@ RUN printf '{\n    "file_format_version" : "1.0.0",\n    "layer": {\n        "na
 
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin:$PATH"
+
+RUN git clone --depth 1 --branch "${ISAACLAB_REF}" https://github.com/isaac-sim/IsaacLab.git /opt/IsaacLab
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

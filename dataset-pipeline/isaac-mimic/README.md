@@ -45,3 +45,5 @@ docker compose run --rm dataset-mimic dataset-mimic generate \
 ```
 
 If your Isaac Lab install does not expose the Mimic runner scripts directly, pass `--isaaclab-root` to a source checkout that contains `scripts/imitation_learning/isaaclab_mimic/`.
+
+Inside `docker compose run --rm dataset-mimic`, Isaac Lab is already cloned into `/opt/IsaacLab`, so `--isaaclab-root` is not needed unless you want to override that checkout.
