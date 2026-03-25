@@ -33,4 +33,15 @@ services:
     stdin_open: true
     tty: true
 
+  dataset-pipeline:
+    build:
+      context: dataset-pipeline
+      dockerfile: Dockerfile
+    environment:
+      DATASET_PIPELINE_WITH_CONVERT: "1"
+    volumes:
+      - ./dataset-pipeline:/workspace/dataset-pipeline:rw
+    network_mode: host
+    stdin_open: true
+    tty: true
 
