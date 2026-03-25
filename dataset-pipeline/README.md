@@ -52,7 +52,8 @@ dataset-pipeline mimic \
   --annotated-file ./annotated_dataset.hdf5 \
   --generated-file ./generated_dataset.hdf5 \
   --enable-cameras \
-  --device cpu
+  --device cpu \
+  --isaaclab-root ~/IsaacLab
 
 dataset-pipeline convert \
   --input-file ./generated_dataset.hdf5 \
@@ -60,6 +61,26 @@ dataset-pipeline convert \
   --robot-type franka \
   --fps 30
 ```
+
+If you prefer Docker, run the offline pipeline container for inspection and conversion:
+
+```bash
+docker compose run --rm dataset-pipeline dataset-pipeline inspect franka_demos.hdf5
+docker compose run --rm dataset-pipeline dataset-pipeline convert \
+  --input-file franka_demos.hdf5 \
+  --repo-id AshDash93/franka-stack-cube \
+  --robot-type franka \
+  --fps 30
+```
+
+The Mimic stage needs access to your Isaac Lab checkout because it shells out to:
+
+```bash
+~/IsaacLab/isaaclab.sh -p scripts/imitation_learning/isaaclab_mimic/annotate_demos.py ...
+~/IsaacLab/isaaclab.sh -p scripts/imitation_learning/isaaclab_mimic/generate_dataset.py ...
+```
+
+If you run `dataset-pipeline mimic` in Docker, mount the Isaac Lab checkout into the container and pass `--isaaclab-root` accordingly.
 
 ## Planned Utilities
 
