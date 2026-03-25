@@ -190,8 +190,7 @@ def convert_hdf5_to_lerobot(
                 for stream in layout.image_streams:
                     frame[stream.feature_key] = _normalize_image(np.asarray(obs[stream.source_key][index]))
                 dataset.add_frame(frame)
-            dataset.save_episode(task=layout.task_name)
+            dataset.save_episode()
 
         if push_to_hub:
             dataset.push_to_hub()
-
