@@ -18,7 +18,7 @@ Use `uv` for Python dependencies. For local use:
 
 ```bash
 cd dataset-pipeline
-uv sync
+uv sync --extra mimic --extra convert
 ```
 
 For Docker:
@@ -28,10 +28,10 @@ docker build -t manipulator-dataset-pipeline .
 docker run --rm -it -v "$PWD/..:/workspace" manipulator-dataset-pipeline dataset-pipeline inspect /workspace/dataset-pipeline/franka_demos.hdf5
 ```
 
-If you need LeRobot conversion support, sync the optional `convert` extra:
+If you need only the Isaac Lab Mimic tooling, sync the optional `mimic` extra:
 
 ```bash
-uv sync --extra convert
+uv sync --extra mimic
 ```
 
 ## Workflow
@@ -55,8 +55,7 @@ docker compose run --rm dataset-pipeline dataset-pipeline annotate \
   --input-file franka_demos.hdf5 \
   --output-file franka_demos_annotated.hdf5 \
   --enable-cameras \
-  --device cpu \
-  --isaaclab-root ~/IsaacLab
+  --device cpu
 ```
 
 ### 3. Generate Mimic dataset
@@ -68,8 +67,7 @@ docker compose run --rm dataset-pipeline dataset-pipeline generate \
   --output-file franka_demos_mimic.hdf5 \
   --enable-cameras \
   --headless \
-  --device cpu \
-  --isaaclab-root ~/IsaacLab
+  --device cpu
 ```
 
 ### 4. Convert to LeRobot
@@ -83,14 +81,7 @@ docker compose run --rm dataset-pipeline dataset-pipeline convert \
   --fps 30
 ```
 
-The Mimic stages need access to your Isaac Lab checkout because they shell out to:
-
-```bash
-~/IsaacLab/isaaclab.sh -p scripts/imitation_learning/isaaclab_mimic/annotate_demos.py ...
-~/IsaacLab/isaaclab.sh -p scripts/imitation_learning/isaaclab_mimic/generate_dataset.py ...
-```
-
-If you run `dataset-pipeline annotate` or `dataset-pipeline generate` in Docker, mount the Isaac Lab checkout into the container and pass `--isaaclab-root` accordingly.
+The Dockerized `dataset-pipeline` service resolves Isaac Lab from its own uv-managed environment. No Isaac Lab checkout mount is needed.
 
 ## Recommended sequence
 

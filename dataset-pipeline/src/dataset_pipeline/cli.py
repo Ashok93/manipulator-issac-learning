@@ -9,7 +9,12 @@ from .isaaclab import build_annotate_command, build_generate_command, run_invoca
 
 
 def _add_shared_isaaclab_args(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--isaaclab-root", type=str, default=None, help="Path to the Isaac Lab checkout.")
+    parser.add_argument(
+        "--isaaclab-root",
+        type=str,
+        default=None,
+        help="Optional path to an Isaac Lab source tree or installed package root.",
+    )
     parser.add_argument("--device", type=str, default="cpu", help="Isaac Lab device.")
 
 

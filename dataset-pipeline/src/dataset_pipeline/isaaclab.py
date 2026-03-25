@@ -1,17 +1,64 @@
 from __future__ import annotations
 
-import subprocess
+import os
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Sequence
-
-from .paths import resolve_isaaclab_root
 
 
 @dataclass(slots=True)
 class IsaacLabInvocation:
     command: list[str]
     cwd: Path
+
+
+_ANNOTATE_SCRIPT = Path("scripts/imitation_learning/isaaclab_mimic/annotate_demos.py")
+_GENERATE_SCRIPT = Path("scripts/imitation_learning/isaaclab_mimic/generate_dataset.py")
+
+
+def _candidate_roots(explicit_root: str | os.PathLike[str] | None) -> list[Path]:
+    roots: list[Path] = []
+
+    if explicit_root is not None:
+        roots.append(Path(explicit_root).expanduser().resolve())
+
+    env_root = os.environ.get("ISAACLAB_ROOT")
+    if env_root:
+        roots.append(Path(env_root).expanduser().resolve())
+
+    for entry in sys.path:
+        candidate = Path(entry).expanduser()
+        if candidate.exists():
+            roots.append(candidate.resolve())
+
+    try:
+        import isaaclab  # type: ignore
+
+        package_root = Path(isaaclab.__file__).resolve().parents[1]
+        roots.append(package_root)
+    except ImportError:
+        pass
+
+    unique_roots: list[Path] = []
+    seen: set[Path] = set()
+    for root in roots:
+        if root not in seen:
+            seen.add(root)
+            unique_roots.append(root)
+    return unique_roots
+
+
+def _resolve_script_path(script_relative: Path, explicit_root: str | os.PathLike[str] | None) -> tuple[Path, Path]:
+    for root in _candidate_roots(explicit_root):
+        candidate = root / script_relative
+        if candidate.exists():
+            return root, candidate
+
+    raise FileNotFoundError(
+        f"Could not locate Isaac Lab script '{script_relative}'. "
+        "Install Isaac Lab in the uv environment or pass --isaaclab-root to a source tree."
+    )
 
 
 def build_annotate_command(
@@ -24,11 +71,10 @@ def build_annotate_command(
     enable_cameras: bool = False,
     auto: bool = True,
 ) -> IsaacLabInvocation:
-    root = resolve_isaaclab_root(isaaclab_root)
+    root, script = _resolve_script_path(_ANNOTATE_SCRIPT, isaaclab_root)
     command = [
-        str(root / "isaaclab.sh"),
-        "-p",
-        "scripts/imitation_learning/isaaclab_mimic/annotate_demos.py",
+        sys.executable,
+        str(script),
         "--device",
         device,
         "--task",
@@ -59,11 +105,10 @@ def build_generate_command(
     rendering_mode: str | None = "performance",
     extra_args: Sequence[str] = (),
 ) -> IsaacLabInvocation:
-    root = resolve_isaaclab_root(isaaclab_root)
+    root, script = _resolve_script_path(_GENERATE_SCRIPT, isaaclab_root)
     command = [
-        str(root / "isaaclab.sh"),
-        "-p",
-        "scripts/imitation_learning/isaaclab_mimic/generate_dataset.py",
+        sys.executable,
+        str(script),
         "--device",
         device,
         "--num_envs",
@@ -88,8 +133,9 @@ def build_generate_command(
 
 
 def run_invocation(invocation: IsaacLabInvocation, *, dry_run: bool = False) -> None:
+    import subprocess
+
     print("Running:", " ".join(invocation.command))
     if dry_run:
         return
     subprocess.run(invocation.command, cwd=invocation.cwd, check=True)
-

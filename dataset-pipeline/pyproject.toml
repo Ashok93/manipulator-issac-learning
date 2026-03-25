@@ -2,7 +2,7 @@
 name = "manipulator-isaac-dataset-pipeline"
 version = "0.1.0"
 description = "Offline Isaac Lab dataset pipeline for annotation, Mimic generation, and LeRobot conversion"
-requires-python = "==3.12.*"
+requires-python = "==3.11.*"
 dependencies = [
     "h5py>=3.11.0",
     "numpy>=1.26.0",
@@ -10,6 +10,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+mimic = [
+    "isaaclab[isaacsim,all]==2.3.2.post1",
+    "gymnasium>=0.29.0",
+    "pyzmq>=26.0.0",
+    "msgpack>=1.0.0",
+]
 convert = [
     "lerobot @ git+https://github.com/huggingface/lerobot.git",
 ]
@@ -24,3 +30,18 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.uv]
+environments = [
+    "sys_platform == 'linux' and python_version == '3.11'",
+]
+override-dependencies = [
+    "pywin32 ; sys_platform == 'win32'",
+]
+
+[tool.uv.sources]
+isaacsim = [{ index = "nvidia" }]
+
+[[tool.uv.index]]
+name = "nvidia"
+url = "https://pypi.nvidia.com"
+explicit = true
