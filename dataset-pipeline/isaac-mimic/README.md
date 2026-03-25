@@ -17,6 +17,12 @@ uv sync --extra mimic
 
 From the repo root:
 
+If you want the annotate UI to open on the host, allow the local X server first:
+
+```bash
+xhost +local:docker
+```
+
 ```bash
 docker compose run --rm dataset-mimic dataset-mimic inspect ../franka_demos.hdf5
 ```
