@@ -1,0 +1,26 @@
+[project]
+name = "manipulator-isaac-dataset-pipeline"
+version = "0.1.0"
+description = "Offline Isaac Lab dataset pipeline for annotation, Mimic generation, and LeRobot conversion"
+requires-python = "==3.12.*"
+dependencies = [
+    "h5py>=3.11.0",
+    "numpy>=1.26.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+convert = [
+    "lerobot @ git+https://github.com/huggingface/lerobot.git",
+]
+
+[project.scripts]
+dataset-pipeline = "dataset_pipeline.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
