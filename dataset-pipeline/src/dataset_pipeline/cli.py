@@ -66,6 +66,12 @@ def build_parser() -> argparse.ArgumentParser:
     convert_parser = subparsers.add_parser("convert", help="Convert an Isaac Lab HDF5 file into LeRobot format.")
     convert_parser.add_argument("--input-file", required=True, type=str)
     convert_parser.add_argument("--repo-id", required=True, type=str)
+    convert_parser.add_argument(
+        "--output-root",
+        type=str,
+        default=None,
+        help="Local directory where the LeRobot dataset should be written.",
+    )
     convert_parser.add_argument("--fps", type=int, default=30)
     convert_parser.add_argument("--robot-type", required=True, type=str)
     convert_parser.add_argument("--state-key", type=str, default=None)
@@ -154,6 +160,7 @@ def main(argv: list[str] | None = None) -> None:
         convert_hdf5_to_lerobot(
             input_file=Path(args.input_file),
             repo_id=args.repo_id,
+            output_root=args.output_root,
             fps=args.fps,
             robot_type=args.robot_type,
             state_key=args.state_key,

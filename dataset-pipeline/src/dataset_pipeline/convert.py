@@ -136,10 +136,16 @@ def _normalize_image(frame: np.ndarray) -> np.ndarray:
     return np.clip(frame, 0, 255).astype(np.uint8)
 
 
+def _default_output_root(input_file: Path, repo_id: str) -> Path:
+    safe_repo_id = repo_id.replace("/", "__")
+    return input_file.parent / "lerobot" / safe_repo_id
+
+
 def convert_hdf5_to_lerobot(
     *,
     input_file: str | Path,
     repo_id: str,
+    output_root: str | Path | None = None,
     fps: int,
     robot_type: str,
     state_key: str | None = None,
@@ -155,6 +161,8 @@ def convert_hdf5_to_lerobot(
         ) from exc
 
     input_path = Path(input_file)
+    root = Path(output_root).expanduser().resolve() if output_root is not None else _default_output_root(input_path, repo_id).resolve()
+    root.mkdir(parents=True, exist_ok=True)
     with h5py.File(input_path, "r") as handle:
         layout = _discover_layout(handle, state_key=state_key, action_key=action_key, image_keys=image_keys)
         first_demo = handle["data"][sorted(handle["data"].keys())[0]]
@@ -164,6 +172,7 @@ def convert_hdf5_to_lerobot(
 
         dataset = LeRobotDataset.create(
             repo_id=repo_id,
+            root=root,
             fps=fps,
             robot_type=robot_type,
             features=features,
@@ -194,3 +203,5 @@ def convert_hdf5_to_lerobot(
 
         if push_to_hub:
             dataset.push_to_hub()
+
+    print(f"LeRobot dataset written to: {root}")

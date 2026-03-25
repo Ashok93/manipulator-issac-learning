@@ -58,6 +58,7 @@ dataset-pipeline mimic \
 dataset-pipeline convert \
   --input-file ./generated_dataset.hdf5 \
   --repo-id AshDash93/franka-stack-cube \
+  --output-root ./lerobot/AshDash93__franka-stack-cube \
   --robot-type franka \
   --fps 30
 ```
@@ -69,6 +70,7 @@ docker compose run --rm dataset-pipeline dataset-pipeline inspect franka_demos.h
 docker compose run --rm dataset-pipeline dataset-pipeline convert \
   --input-file franka_demos.hdf5 \
   --repo-id AshDash93/franka-stack-cube \
+  --output-root ./lerobot/AshDash93__franka-stack-cube \
   --robot-type franka \
   --fps 30
 ```
@@ -81,6 +83,16 @@ The Mimic stage needs access to your Isaac Lab checkout because it shells out to
 ```
 
 If you run `dataset-pipeline mimic` in Docker, mount the Isaac Lab checkout into the container and pass `--isaaclab-root` accordingly.
+
+## Recommended sequence
+
+For the current Isaac Lab workflow:
+
+1. Collect 10 successful raw demos in `teleop-vr/`.
+2. Inspect the raw HDF5 in `dataset-pipeline/`.
+3. Run `dataset-pipeline mimic` to annotate and generate the visuomotor dataset.
+4. Run `dataset-pipeline convert` to write a local LeRobot dataset under a mounted folder.
+5. Point `train/` at that LeRobot dataset later.
 
 ## Planned Utilities
 
