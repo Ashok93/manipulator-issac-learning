@@ -12,6 +12,7 @@ dependencies = [
 mimic = [
     "isaaclab[isaacsim,all]==2.3.2.post1",
     "gymnasium>=0.29.0",
+    "ipython>=8.0.0",
     "pyzmq>=26.0.0",
     "msgpack>=1.0.0",
 ]
