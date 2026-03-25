@@ -35,5 +35,5 @@ ENV PATH="/root/.local/bin:$PATH"
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-WORKDIR /workspace/dataset-pipeline
+WORKDIR /workspace/dataset-pipeline/isaac-mimic
 ENTRYPOINT ["/entrypoint.sh"]

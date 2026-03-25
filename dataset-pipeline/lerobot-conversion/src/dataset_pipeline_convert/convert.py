@@ -8,8 +8,6 @@ from typing import Any
 import h5py
 import numpy as np
 
-from .hdf5 import _is_image_dataset, _is_state_like
-
 
 @dataclass(slots=True)
 class ImageStream:
@@ -24,6 +22,14 @@ class ConversionLayout:
     action_key: str
     image_streams: list[ImageStream] = field(default_factory=list)
     task_name: str = "unknown-task"
+
+
+def _is_image_dataset(dataset: h5py.Dataset) -> bool:
+    return dataset.ndim == 4 and dataset.shape[-1] in (3, 4) and dataset.dtype.kind in {"u", "f"}
+
+
+def _is_state_like(dataset: h5py.Dataset) -> bool:
+    return dataset.ndim >= 2 and dataset.shape[0] > 0 and dataset.dtype.kind in {"u", "i", "f"}
 
 
 def _decode_env_args(raw: Any) -> dict[str, Any] | None:
@@ -138,7 +144,10 @@ def _normalize_image(frame: np.ndarray) -> np.ndarray:
 
 def _default_output_root(input_file: Path, repo_id: str) -> Path:
     safe_repo_id = repo_id.replace("/", "__")
-    return input_file.parent / "lerobot" / safe_repo_id
+    base_dir = input_file.parent.parent if input_file.parent.name == "mimic" else input_file.parent
+    if base_dir.name == "outputs":
+        return base_dir / "lerobot" / safe_repo_id
+    return base_dir / "outputs" / "lerobot" / safe_repo_id
 
 
 def convert_hdf5_to_lerobot(

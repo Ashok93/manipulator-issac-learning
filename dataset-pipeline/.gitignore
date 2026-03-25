@@ -4,4 +4,4 @@ __pycache__/
 *.pyc
 *.hdf5
 datasets/
-
+outputs/

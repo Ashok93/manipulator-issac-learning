@@ -113,7 +113,7 @@ For recording, the same hotkeys apply:
 - `r` to reset / finalize the current episode
 - `q` to quit
 
-Visuomotor annotation and Mimic generation happen later in `dataset-pipeline/`, after the raw HDF5 demos are collected.
+Visuomotor annotation and Mimic generation happen later in `dataset-pipeline/isaac-mimic/`, and LeRobot conversion happens in `dataset-pipeline/lerobot-conversion/`, after the raw HDF5 demos are collected.
 
 ---
 

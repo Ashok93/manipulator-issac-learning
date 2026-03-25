@@ -1,0 +1,20 @@
+[project]
+name = "manipulator-isaac-lerobot-conversion"
+version = "0.1.0"
+description = "LeRobot conversion utilities for Isaac Lab HDF5 demos"
+requires-python = "==3.12.*"
+dependencies = [
+    "h5py>=3.11.0",
+    "numpy>=1.26.0",
+    "lerobot @ git+https://github.com/huggingface/lerobot.git",
+]
+
+[project.scripts]
+dataset-convert = "dataset_pipeline_convert.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

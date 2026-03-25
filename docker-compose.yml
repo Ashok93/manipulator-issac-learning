@@ -33,21 +33,30 @@ services:
     stdin_open: true
     tty: true
 
-  dataset-pipeline:
+  dataset-mimic:
     build:
-      context: dataset-pipeline
+      context: dataset-pipeline/isaac-mimic
       dockerfile: Dockerfile
     environment:
       ACCEPT_EULA: "Y"
       OMNI_KIT_ACCEPT_EULA: "YES"
       NVIDIA_VISIBLE_DEVICES: "all"
       NVIDIA_DRIVER_CAPABILITIES: "all"
-      DATASET_PIPELINE_WITH_MIMIC: "1"
-      DATASET_PIPELINE_WITH_CONVERT: "1"
+      DATASET_MIMIC_WITH_MIMIC: "1"
     volumes:
       - ./dataset-pipeline:/workspace/dataset-pipeline:rw
     runtime: nvidia
     network_mode: host
     shm_size: "4gb"
+    stdin_open: true
+    tty: true
+
+  dataset-convert:
+    build:
+      context: dataset-pipeline/lerobot-conversion
+      dockerfile: Dockerfile
+    volumes:
+      - ./dataset-pipeline:/workspace/dataset-pipeline:rw
+    network_mode: host
     stdin_open: true
     tty: true

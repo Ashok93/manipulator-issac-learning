@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from .convert import convert_hdf5_to_lerobot
 from .hdf5 import print_summary, summarize
 from .isaaclab import build_annotate_command, build_generate_command, run_invocation
 
@@ -25,7 +24,7 @@ def _ensure_parent(path: str | Path) -> Path:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="dataset-pipeline")
+    parser = argparse.ArgumentParser(prog="dataset-mimic")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     inspect_parser = subparsers.add_parser("inspect", help="Print a summary of an Isaac Lab HDF5 file.")
@@ -67,22 +66,6 @@ def build_parser() -> argparse.ArgumentParser:
     mimic_parser.add_argument("--generation-num-trials", type=int, default=1000)
     mimic_parser.add_argument("--rendering-mode", type=str, default="performance")
     mimic_parser.add_argument("--extra-arg", action="append", default=[], help="Forward extra args to Isaac Lab.")
-
-    convert_parser = subparsers.add_parser("convert", help="Convert an Isaac Lab HDF5 file into LeRobot format.")
-    convert_parser.add_argument("--input-file", required=True, type=str)
-    convert_parser.add_argument("--repo-id", required=True, type=str)
-    convert_parser.add_argument(
-        "--output-root",
-        type=str,
-        default=None,
-        help="Local directory where the LeRobot dataset should be written.",
-    )
-    convert_parser.add_argument("--fps", type=int, default=30)
-    convert_parser.add_argument("--robot-type", required=True, type=str)
-    convert_parser.add_argument("--state-key", type=str, default=None)
-    convert_parser.add_argument("--action-key", type=str, default=None)
-    convert_parser.add_argument("--image-key", action="append", default=[])
-    convert_parser.add_argument("--push-to-hub", action=argparse.BooleanOptionalAction, default=False)
 
     return parser
 
@@ -159,20 +142,6 @@ def main(argv: list[str] | None = None) -> None:
             extra_args=args.extra_arg,
         )
         run_invocation(generate_invocation)
-        return
-
-    if args.command == "convert":
-        convert_hdf5_to_lerobot(
-            input_file=Path(args.input_file),
-            repo_id=args.repo_id,
-            output_root=args.output_root,
-            fps=args.fps,
-            robot_type=args.robot_type,
-            state_key=args.state_key,
-            action_key=args.action_key,
-            image_keys=args.image_key or None,
-            push_to_hub=args.push_to_hub,
-        )
         return
 
     raise AssertionError(f"Unhandled command: {args.command}")
