@@ -41,48 +41,56 @@ uv sync --extra convert
 3. Run Isaac Lab Mimic generation with cameras enabled.
 4. Convert the final HDF5 into LeRobot format.
 
-Example commands:
-
-```bash
-dataset-pipeline inspect ./franka_demos.hdf5
-
-dataset-pipeline mimic \
-  --task Isaac-Stack-Cube-Franka-IK-Rel-Visuomotor-Mimic-v0 \
-  --input-file ./franka_demos.hdf5 \
-  --annotated-file ./annotated_dataset.hdf5 \
-  --generated-file ./generated_dataset.hdf5 \
-  --enable-cameras \
-  --device cpu \
-  --isaaclab-root ~/IsaacLab
-
-dataset-pipeline convert \
-  --input-file ./generated_dataset.hdf5 \
-  --repo-id AshDash93/franka-stack-cube \
-  --output-root ./lerobot/AshDash93__franka-stack-cube \
-  --robot-type franka \
-  --fps 30
-```
-
-If you prefer Docker, run the offline pipeline container for inspection and conversion:
+### 1. Inspect raw demos
 
 ```bash
 docker compose run --rm dataset-pipeline dataset-pipeline inspect franka_demos.hdf5
-docker compose run --rm dataset-pipeline dataset-pipeline convert \
+```
+
+### 2. Annotate demos
+
+```bash
+docker compose run --rm dataset-pipeline dataset-pipeline annotate \
+  --task Isaac-Stack-Cube-Franka-IK-Rel-Visuomotor-Mimic-v0 \
   --input-file franka_demos.hdf5 \
+  --output-file franka_demos_annotated.hdf5 \
+  --enable-cameras \
+  --device cpu \
+  --isaaclab-root ~/IsaacLab
+```
+
+### 3. Generate Mimic dataset
+
+```bash
+docker compose run --rm dataset-pipeline dataset-pipeline generate \
+  --task Isaac-Stack-Cube-Franka-IK-Rel-Visuomotor-Mimic-v0 \
+  --input-file franka_demos_annotated.hdf5 \
+  --output-file franka_demos_mimic.hdf5 \
+  --enable-cameras \
+  --headless \
+  --device cpu \
+  --isaaclab-root ~/IsaacLab
+```
+
+### 4. Convert to LeRobot
+
+```bash
+docker compose run --rm dataset-pipeline dataset-pipeline convert \
+  --input-file franka_demos_mimic.hdf5 \
   --repo-id AshDash93/franka-stack-cube \
   --output-root ./lerobot/AshDash93__franka-stack-cube \
   --robot-type franka \
   --fps 30
 ```
 
-The Mimic stage needs access to your Isaac Lab checkout because it shells out to:
+The Mimic stages need access to your Isaac Lab checkout because they shell out to:
 
 ```bash
 ~/IsaacLab/isaaclab.sh -p scripts/imitation_learning/isaaclab_mimic/annotate_demos.py ...
 ~/IsaacLab/isaaclab.sh -p scripts/imitation_learning/isaaclab_mimic/generate_dataset.py ...
 ```
 
-If you run `dataset-pipeline mimic` in Docker, mount the Isaac Lab checkout into the container and pass `--isaaclab-root` accordingly.
+If you run `dataset-pipeline annotate` or `dataset-pipeline generate` in Docker, mount the Isaac Lab checkout into the container and pass `--isaaclab-root` accordingly.
 
 ## Recommended sequence
 
@@ -90,7 +98,7 @@ For the current Isaac Lab workflow:
 
 1. Collect 10 successful raw demos in `teleop-vr/`.
 2. Inspect the raw HDF5 in `dataset-pipeline/`.
-3. Run `dataset-pipeline mimic` to annotate and generate the visuomotor dataset.
+3. Run `dataset-pipeline annotate` and `dataset-pipeline generate` to create the visuomotor HDF5.
 4. Run `dataset-pipeline convert` to write a local LeRobot dataset under a mounted folder.
 5. Point `train/` at that LeRobot dataset later.
 
