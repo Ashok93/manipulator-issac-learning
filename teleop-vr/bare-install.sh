@@ -6,10 +6,14 @@
 # Usage: bash teleop-vr/bare-install.sh
 set -e
 
-echo "=== [1/8] Vulkan / EGL / GPU Renderer ==="
-sudo mkdir -p /etc/vulkan/icd.d /etc/vulkan/implicit_layer.d /usr/share/glvnd/egl_vendor.d
+echo "=== [1/6] Vulkan / EGL / GPU Renderer ==="
+if vulkaninfo --summary &>/dev/null; then
+    echo "[INFO] Vulkan already working, skipping setup."
+else
+    echo "[INFO] Vulkan not detected, setting up NVIDIA ICD manifests..."
+    sudo mkdir -p /etc/vulkan/icd.d /etc/vulkan/implicit_layer.d /usr/share/glvnd/egl_vendor.d
 
-echo '{
+    echo '{
     "file_format_version" : "1.0.0",
     "ICD" : {
         "library_path" : "libGLX_nvidia.so.0",
@@ -17,21 +21,22 @@ echo '{
     }
 }' | sudo tee /etc/vulkan/icd.d/nvidia_icd.json > /dev/null
 
-echo '{
+    echo '{
     "file_format_version" : "1.0.0",
     "ICD" : {
         "library_path" : "libEGL_nvidia.so.0"
     }
 }' | sudo tee /usr/share/glvnd/egl_vendor.d/10_nvidia.json > /dev/null
 
-grep -q VK_DRIVER_FILES ~/.bashrc 2>/dev/null || \
-    echo 'export VK_DRIVER_FILES=/etc/vulkan/icd.d/nvidia_icd.json' >> ~/.bashrc
-export VK_DRIVER_FILES=/etc/vulkan/icd.d/nvidia_icd.json
+    grep -q VK_DRIVER_FILES ~/.bashrc 2>/dev/null || \
+        echo 'export VK_DRIVER_FILES=/etc/vulkan/icd.d/nvidia_icd.json' >> ~/.bashrc
+    export VK_DRIVER_FILES=/etc/vulkan/icd.d/nvidia_icd.json
 
-sudo apt-get update
-sudo apt-get install -y vulkan-tools
+    sudo apt-get update
+    sudo apt-get install -y vulkan-tools
+fi
 
-echo "=== [2/8] System dependencies ==="
+echo "=== [2/6] System dependencies ==="
 sudo dpkg --add-architecture i386
 sudo apt-get update
 sudo apt-get install -y \
@@ -42,10 +47,9 @@ sudo apt-get install -y \
     libxcursor1 libxrender1 libxfixes3 libxkbcommon0 libxkbcommon-x11-0 \
     libcap2-bin \
     || true
-# Noble (24.04) may not have libgl1-mesa-glx:i386 — try alternatives
-sudo apt-get install -y libgl1-mesa-dri:i386 libglx-mesa0:i386 2>/dev/null || true
+# sudo apt-get install -y libgl1-mesa-dri:i386 libglx-mesa0:i386 2>/dev/null || true  # Noble (24.04) fallback if libgl1-mesa-glx:i386 missing
 
-echo "=== [3/8] Steam ==="
+echo "=== [3/6] Steam ==="
 if ! command -v steam &>/dev/null; then
     wget -q https://cdn.akamai.steamstatic.com/client/installer/steam.deb
     sudo dpkg -i steam.deb || true
@@ -56,7 +60,7 @@ else
     echo "[INFO] Steam already installed."
 fi
 
-echo "=== [4/8] SteamVR ==="
+echo "=== [4/6] SteamVR ==="
 STEAMVR_DIR="$HOME/.local/share/Steam/steamapps/common/SteamVR"
 if [ ! -d "$STEAMVR_DIR" ]; then
     echo "[INFO] SteamVR not found. Install it from Steam Library (app ID 250820)."
@@ -67,7 +71,7 @@ else
     sudo setcap CAP_SYS_NICE+eip "$STEAMVR_DIR/bin/linux64/vrcompositor-launcher" 2>/dev/null || true
 fi
 
-echo "=== [5/8] ALVR streamer v20.14.1 ==="
+echo "=== [5/6] ALVR streamer v20.14.1 ==="
 if [ ! -d "$HOME/alvr_streamer_linux" ]; then
     cd ~
     wget -q https://github.com/alvr-org/ALVR/releases/download/v20.14.1/alvr_streamer_linux.tar.gz
@@ -85,57 +89,62 @@ if [ -d "$STEAMVR_DIR" ]; then
     echo "[INFO] ALVR driver registered with SteamVR."
 fi
 
-echo "=== [6/8] Python 3.11 + uv ==="
-if ! command -v python3.11 &>/dev/null; then
-    sudo add-apt-repository -y ppa:deadsnakes/ppa
-    sudo apt-get update
-    sudo apt-get install -y python3.11 python3.11-venv python3.11-dev
-fi
-
+echo "=== [6/6] uv + Isaac Lab (teleop-vr package) ==="
 if ! command -v uv &>/dev/null; then
     curl -LsSf https://astral.sh/uv/install.sh | sh
     export PATH="$HOME/.local/bin:$PATH"
 fi
 
-echo "=== [7/8] Isaac Lab + Isaac Sim (via uv) ==="
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
-uv sync --extra sim
+uv sync
 
-echo "=== [8/9] Clone IsaacLab for teleop scripts ==="
-if [ ! -d "$HOME/IsaacLab" ]; then
-    git clone --depth 1 https://github.com/isaac-sim/IsaacLab.git "$HOME/IsaacLab"
-else
-    echo "[INFO] IsaacLab already cloned at ~/IsaacLab"
-fi
+# ---------------------------------------------------------------------------
+# Commented out — testing if these are needed
+# ---------------------------------------------------------------------------
 
-echo "=== [9/9] OpenXR XCR capture layer ==="
-sudo mkdir -p /usr/share/openxr/1/api_layers/implicit.d
-bash scripts/fix_xcr_layer.sh 2>/dev/null || true
+# # Python 3.11 system install — uv manages its own Python, this may be unnecessary
+# if ! command -v python3.11 &>/dev/null; then
+#     sudo add-apt-repository -y ppa:deadsnakes/ppa
+#     sudo apt-get update
+#     sudo apt-get install -y python3.11 python3.11-venv python3.11-dev
+# fi
 
-# Enable hand tracking in SteamVR config
-VRSETTINGS=$(find "$HOME" -name "steamvr.vrsettings" 2>/dev/null | head -1)
-if [ -n "$VRSETTINGS" ]; then
-    python3.11 -c "
-import json
-path = '$VRSETTINGS'
-with open(path) as f:
-    cfg = json.load(f)
-cfg.setdefault('driver_alvr_server', {})['handTrackingEnabled'] = True
-cfg.setdefault('steamvr', {}).update({'enableHandTracking': True, 'handTrackingEnabled': True})
-with open(path, 'w') as f:
-    json.dump(cfg, f, indent=3)
-print('[INFO] Hand tracking enabled in SteamVR config.')
-" 2>/dev/null || true
-fi
+# # Isaac Lab clone — may not be needed if uv-installed isaaclab package is sufficient
+# if [ ! -d "$HOME/IsaacLab" ]; then
+#     git clone --depth 1 https://github.com/isaac-sim/IsaacLab.git "$HOME/IsaacLab"
+# else
+#     echo "[INFO] IsaacLab already cloned at ~/IsaacLab"
+# fi
 
-# Set XR_RUNTIME_JSON
-STEAMXR_JSON=$(find "$HOME" -name "steamxr_linux64.json" 2>/dev/null | head -1)
-if [ -n "$STEAMXR_JSON" ]; then
-    grep -q XR_RUNTIME_JSON ~/.bashrc 2>/dev/null || \
-        echo "export XR_RUNTIME_JSON=\"$STEAMXR_JSON\"" >> ~/.bashrc
-    echo "[INFO] XR_RUNTIME_JSON set to $STEAMXR_JSON"
-fi
+# # OpenXR XCR capture layer fix — testing if needed
+# sudo mkdir -p /usr/share/openxr/1/api_layers/implicit.d
+# bash scripts/fix_xcr_layer.sh 2>/dev/null || true
+
+# # SteamVR hand tracking config — requires SteamVR to have run at least once;
+# # silently no-ops on fresh install. Move to run_teleop.sh if needed.
+# VRSETTINGS=$(find "$HOME" -name "steamvr.vrsettings" 2>/dev/null | head -1)
+# if [ -n "$VRSETTINGS" ]; then
+#     python3.11 -c "
+# import json
+# path = '$VRSETTINGS'
+# with open(path) as f:
+#     cfg = json.load(f)
+# cfg.setdefault('driver_alvr_server', {})['handTrackingEnabled'] = True
+# cfg.setdefault('steamvr', {}).update({'enableHandTracking': True, 'handTrackingEnabled': True})
+# with open(path, 'w') as f:
+#     json.dump(cfg, f, indent=3)
+# print('[INFO] Hand tracking enabled in SteamVR config.')
+# " 2>/dev/null || true
+# fi
+
+# # XR_RUNTIME_JSON — may belong in run_teleop.sh rather than install time
+# STEAMXR_JSON=$(find "$HOME" -name "steamxr_linux64.json" 2>/dev/null | head -1)
+# if [ -n "$STEAMXR_JSON" ]; then
+#     grep -q XR_RUNTIME_JSON ~/.bashrc 2>/dev/null || \
+#         echo "export XR_RUNTIME_JSON=\"$STEAMXR_JSON\"" >> ~/.bashrc
+#     echo "[INFO] XR_RUNTIME_JSON set to $STEAMXR_JSON"
+# fi
 
 echo ""
 echo "=== DONE ==="
