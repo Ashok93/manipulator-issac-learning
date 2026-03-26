@@ -14,7 +14,7 @@ On a fresh VM with NVIDIA drivers:
 bash teleop-vr/bare-install.sh
 ```
 
-This installs: Vulkan/EGL configs, Steam, ALVR v20.14.1, Python 3.11, uv, Isaac Lab, and registers the OpenXR XCR capture layer.
+This installs: Vulkan/EGL configs, Steam, ALVR v20.14.1, uv, Isaac Lab.
 
 ---
 
@@ -121,7 +121,6 @@ Visuomotor annotation and Mimic generation happen later in `dataset-pipeline/isa
 
 | Symptom | Fix |
 |---------|-----|
-| `xrCreateInstance failed` | `sudo bash teleop-vr/scripts/fix_xcr_layer.sh` |
 | `Failed to unblock ALVR driver: steamvr.vrsettings does not exist` | Launch SteamVR at least once first so it creates the config |
 | SteamVR won't start | Check launch options path is correct (Step 3) |
 | ALVR dashboard won't open | `sudo apt install libva2 libva-drm2 libva-x11-2 libxcursor1 libxrender1 libxfixes3` |
@@ -142,8 +141,6 @@ teleop-vr/
   scripts/
     isaaclab_session_utils.py        # Shared hotkey / device helpers
     start_steam_alvr.sh              # Start SteamVR + ALVR (Step 5)
-    fix_xcr_layer.sh                 # Register OpenXR XCR capture layer
-    fix_steamvr_handtracking.py      # Enable hand tracking in steamvr.vrsettings
     teleop_se3_agent_hotkeys.py      # Local launcher with keyboard session controls
     record_demos_with_hotkeys.py     # Local demo recorder with keyboard session controls
 ```
