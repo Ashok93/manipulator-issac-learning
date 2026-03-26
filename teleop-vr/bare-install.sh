@@ -63,7 +63,6 @@ sudo apt-get install -y \
     libxcursor1 libxrender1 libxfixes3 libxkbcommon0 libxkbcommon-x11-0 \
     libcap2-bin \
     || true
-# sudo apt-get install -y libgl1-mesa-dri:i386 libglx-mesa0:i386 2>/dev/null || true  # Noble (24.04) fallback if libgl1-mesa-glx:i386 missing
 
 echo "=== [3/6] Steam ==="
 if ! command -v steam &>/dev/null; then
