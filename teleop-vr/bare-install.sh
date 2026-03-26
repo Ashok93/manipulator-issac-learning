@@ -115,51 +115,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 uv sync
 
-# ---------------------------------------------------------------------------
-# Commented out — testing if these are needed
-# ---------------------------------------------------------------------------
-
-# # Python 3.11 system install — uv manages its own Python, this may be unnecessary
-# if ! command -v python3.11 &>/dev/null; then
-#     sudo add-apt-repository -y ppa:deadsnakes/ppa
-#     sudo apt-get update
-#     sudo apt-get install -y python3.11 python3.11-venv python3.11-dev
-# fi
-
 if [ ! -d "$HOME/IsaacLab" ]; then
     git clone --depth 1 https://github.com/isaac-sim/IsaacLab.git "$HOME/IsaacLab"
 else
     echo "[INFO] IsaacLab already cloned at ~/IsaacLab"
 fi
-
-# # OpenXR XCR capture layer fix — testing if needed
-# sudo mkdir -p /usr/share/openxr/1/api_layers/implicit.d
-# bash scripts/fix_xcr_layer.sh 2>/dev/null || true
-
-# # SteamVR hand tracking config — requires SteamVR to have run at least once;
-# # silently no-ops on fresh install. Move to run_teleop.sh if needed.
-# VRSETTINGS=$(find "$HOME" -name "steamvr.vrsettings" 2>/dev/null | head -1)
-# if [ -n "$VRSETTINGS" ]; then
-#     python3.11 -c "
-# import json
-# path = '$VRSETTINGS'
-# with open(path) as f:
-#     cfg = json.load(f)
-# cfg.setdefault('driver_alvr_server', {})['handTrackingEnabled'] = True
-# cfg.setdefault('steamvr', {}).update({'enableHandTracking': True, 'handTrackingEnabled': True})
-# with open(path, 'w') as f:
-#     json.dump(cfg, f, indent=3)
-# print('[INFO] Hand tracking enabled in SteamVR config.')
-# " 2>/dev/null || true
-# fi
-
-# # XR_RUNTIME_JSON — may belong in run_teleop.sh rather than install time
-# STEAMXR_JSON=$(find "$HOME" -name "steamxr_linux64.json" 2>/dev/null | head -1)
-# if [ -n "$STEAMXR_JSON" ]; then
-#     grep -q XR_RUNTIME_JSON ~/.bashrc 2>/dev/null || \
-#         echo "export XR_RUNTIME_JSON=\"$STEAMXR_JSON\"" >> ~/.bashrc
-#     echo "[INFO] XR_RUNTIME_JSON set to $STEAMXR_JSON"
-# fi
 
 echo ""
 echo "=== DONE ==="
