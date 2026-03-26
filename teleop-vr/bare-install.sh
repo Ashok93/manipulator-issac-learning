@@ -126,12 +126,11 @@ uv sync
 #     sudo apt-get install -y python3.11 python3.11-venv python3.11-dev
 # fi
 
-# # Isaac Lab clone — may not be needed if uv-installed isaaclab package is sufficient
-# if [ ! -d "$HOME/IsaacLab" ]; then
-#     git clone --depth 1 https://github.com/isaac-sim/IsaacLab.git "$HOME/IsaacLab"
-# else
-#     echo "[INFO] IsaacLab already cloned at ~/IsaacLab"
-# fi
+if [ ! -d "$HOME/IsaacLab" ]; then
+    git clone --depth 1 https://github.com/isaac-sim/IsaacLab.git "$HOME/IsaacLab"
+else
+    echo "[INFO] IsaacLab already cloned at ~/IsaacLab"
+fi
 
 # # OpenXR XCR capture layer fix — testing if needed
 # sudo mkdir -p /usr/share/openxr/1/api_layers/implicit.d
