@@ -7,12 +7,17 @@
 set -e
 
 echo "=== [1/6] Vulkan / EGL / GPU Renderer ==="
-if vulkaninfo --summary &>/dev/null; then
-    echo "[INFO] Vulkan already working, skipping setup."
-else
-    echo "[INFO] Vulkan not detected, setting up NVIDIA ICD manifests..."
-    sudo mkdir -p /etc/vulkan/icd.d /etc/vulkan/implicit_layer.d /usr/share/glvnd/egl_vendor.d
 
+# Install vulkan-tools if missing (needed for vulkaninfo check)
+if ! command -v vulkaninfo &>/dev/null; then
+    sudo apt-get update
+    sudo apt-get install -y vulkan-tools
+fi
+
+# Write NVIDIA Vulkan ICD only if no ICD exists in either standard location
+if [ ! -f /etc/vulkan/icd.d/nvidia_icd.json ] && [ ! -f /usr/share/vulkan/icd.d/nvidia_icd.json ]; then
+    echo "[INFO] No NVIDIA Vulkan ICD found, writing to /etc/vulkan/icd.d/..."
+    sudo mkdir -p /etc/vulkan/icd.d
     echo '{
     "file_format_version" : "1.0.0",
     "ICD" : {
@@ -20,21 +25,32 @@ else
         "api_version" : "1.3.194"
     }
 }' | sudo tee /etc/vulkan/icd.d/nvidia_icd.json > /dev/null
+else
+    echo "[INFO] NVIDIA Vulkan ICD already present, skipping."
+fi
 
+# Write EGL vendor config only if missing
+if [ ! -f /usr/share/glvnd/egl_vendor.d/10_nvidia.json ]; then
+    echo "[INFO] No NVIDIA EGL vendor config found, writing..."
+    sudo mkdir -p /usr/share/glvnd/egl_vendor.d
     echo '{
     "file_format_version" : "1.0.0",
     "ICD" : {
         "library_path" : "libEGL_nvidia.so.0"
     }
 }' | sudo tee /usr/share/glvnd/egl_vendor.d/10_nvidia.json > /dev/null
+else
+    echo "[INFO] NVIDIA EGL vendor config already present, skipping."
+fi
 
+# Set VK_DRIVER_FILES only if pointing to our manually written ICD
+if [ -f /etc/vulkan/icd.d/nvidia_icd.json ]; then
     grep -q VK_DRIVER_FILES ~/.bashrc 2>/dev/null || \
         echo 'export VK_DRIVER_FILES=/etc/vulkan/icd.d/nvidia_icd.json' >> ~/.bashrc
     export VK_DRIVER_FILES=/etc/vulkan/icd.d/nvidia_icd.json
-
-    sudo apt-get update
-    sudo apt-get install -y vulkan-tools
 fi
+
+vulkaninfo --summary &>/dev/null && echo "[INFO] Vulkan OK." || echo "[WARN] Vulkan check failed — may need driver re-install."
 
 echo "=== [2/6] System dependencies ==="
 sudo dpkg --add-architecture i386
